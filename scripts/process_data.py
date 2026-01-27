@@ -16,7 +16,6 @@ def save_to_csv(df, filename="processed_data.csv"):
 def select_final_columns(df):
     """Keeps only the specific columns requested."""
     target_cols = ['FECHA', 'NMT', 'LAeqDiurno', 'LAeqNocturno']
-    # We use intersection to avoid errors if a column is missing
     return df[target_cols]
 
 def clean_data(df):
@@ -33,7 +32,7 @@ def clean_data(df):
     df = df.sort_values(["FECHA"]).reset_index(drop=True)
     
     # Save the result
-    save_to_csv(df, f"ruido_processed.csv")
+    # save_to_csv(df, f"ruido_processed.csv")
     
     return df
 
