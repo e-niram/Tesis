@@ -1,0 +1,39 @@
+/* TFM */
+
+/* Agregar columna Fecha_n en formato esperado */
+DATA SERIES.Diurno;
+   SET SERIES.Diurno;
+   Fecha_n=intnx('day', '2feb2015'd, _n_-1);
+   format Fecha_n DATE.;
+RUN;
+
+/* Mostrar la serie para la estación 24 */
+PROC SGPLOT DATA=SERIES.Diurno;
+   SERIES X=Fecha_n Y='1'n; /* SAS Name Literals para indexar correctamente */
+RUN;
+
+/* Imputar valores ausentes */
+PROC EXPAND DATA=SERIES.Diurno
+   OUT=Series.Diurno_Imp METHOD=JOIN PLOT=ALL;
+   ID Fecha_n;
+RUN;
+
+/* Revisión */
+PROC PRINT DATA=SERIES.Diurno (OBS=20);
+RUN;
+
+PROC PRINT DATA=SERIES.Diurno_Imp (OBS=20);
+RUN;
+
+/* Exportar resultado */
+%put %sysget(USER); /* u64274668 */
+
+PROC EXPORT 
+  DATA=SERIES.Diurno_imp
+  DBMS=xlsx 
+  OUTFILE="/home/u64274668/DatosEjerciciosClase/DiurnoImputado.xlsx"
+  REPLACE;
+RUN;
+
+proc means data=SERIES.Diurno_imp n nmiss;
+run;
