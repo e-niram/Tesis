@@ -1,58 +1,66 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 from tslearn.clustering import TimeSeriesKMeans
 from tslearn.preprocessing import TimeSeriesScalerMeanVariance
 
-# 1. Load the dataset from Excel
+# 1. Carga de datos
 file_path = 'data/processed/DiurnoImputado.xlsx'
 df = pd.read_excel(file_path, engine='openpyxl')
 
-# 2. Data Preparation
-# We must ensure ONLY numeric columns are transposed. 
-# We filter by numeric types to safely exclude 'FECHA' and any other non-numeric info.
+# Convertimos la columna FECHA a objetos datetime para el eje X
+df['FECHA'] = pd.to_datetime(df['FECHA'])
+dates = df['FECHA']
+
+# 2. Preparación de datos (solo numéricos)
 df_numeric = df.select_dtypes(include=['number'])
+X = df_numeric.T.values # Estaciones como filas
 
-# Transpose: rows become stations (Time Series)
-X = df_numeric.T.values
-
-# 3. Scaling (Mean-Variance)
-# Now X contains only floats, so the error will be resolved.
+# 3. Escalado
 X_scaled = TimeSeriesScalerMeanVariance().fit_transform(X)
 
-# 4. DTW Clustering
-n_clusters = 4
+# 4. Clustering DTW
+n_clusters = 2 # Probar solo 3 y 4. Ya con 3 se ven diferencias, con 4 tenemos un cluster con 1 solo individuo
 model = TimeSeriesKMeans(
     n_clusters=n_clusters,
     metric="dtw",
     max_iter=10,
-    random_state=42,
-    n_jobs=-1 # Use all CPU cores to speed up DTW calculation
+    random_state=42, # Probar con 10 semillas, todos los gráficos NO van en el escrito. Solo se dice que se probaron con 10 semillas y decir que "la agrupación que más se repite es esta, entonces elegimos esta". Es de ver nada más, sobre todo si cambia el número de individuos en cada cluster; si algo se repite, nos quedamos con una de esas semillas
+    n_jobs=-1,
+    dtw_inertia=True # Calcular este valor 
 )
+cluster_labels = model.fit_predict(X)
 
-cluster_labels = model.fit_predict(X_scaled)
+# Lo ideal es mostrar la variabilidad entre clusters (bueno es alto) y variabilidad intra clusters (bueno es bajo)
+# Calcularlo para poder comparar, por ejemplo, para decir que 3 es mejor que 4 en una tabla
+# Inertia es lo mimso que variabilida
 
-# 5. Mapping Results
-# We use the column names from df_numeric to identify the stations
-station_ids = df_numeric.columns
-results = pd.DataFrame({
-    'Station_ID': station_ids,
-    'Cluster': cluster_labels
-})
+# 5. Visualización con Fechas Reales
+fig, axes = plt.subplots(n_clusters, 1, figsize=(12, 15), sharex=True)
 
-# 6. Visualization
-plt.figure(figsize=(12, 10))
 for i in range(n_clusters):
-    plt.subplot(n_clusters, 1, i + 1)
-    cluster_series = X_scaled[cluster_labels == i]
-    for series in cluster_series:
-        plt.plot(series.ravel(), color='grey', alpha=0.3)
+    ax = axes[i]
+    cluster_series = X[cluster_labels == i]
     
-    # Plot the centroid (the average shape of the cluster)
-    plt.plot(model.cluster_centers_[i].ravel(), color='red', linewidth=2)
-    plt.title(f'Cluster {i} - Member Stations: {len(cluster_series)}')
-    plt.grid(True, alpha=0.2)
+    for series in cluster_series:
+        ax.plot(dates, series.ravel(), color='grey', alpha=0.2)
+    
+    # Dibujar el centroide
+    ax.plot(dates, model.cluster_centers_[i].ravel(), color='red', linewidth=2)
+    
+    ax.set_title(f'Cluster {i} - Estaciones: {len(cluster_series)}')
+    ax.set_ylabel('Decibeles')
+    
+    # Formatear el eje X para que muestre fechas
+    ax.xaxis.set_major_locator(mdates.AutoDateLocator())
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%b %Y'))
+    ax.grid(True, alpha=0.2)
 
+plt.xticks(rotation=45)
 plt.tight_layout()
 plt.show()
 
+# 6. Guardar resultados
+station_ids = df_numeric.columns
+results = pd.DataFrame({'Station_ID': station_ids, 'Cluster': cluster_labels})
 print(results)
