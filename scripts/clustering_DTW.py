@@ -13,7 +13,7 @@ os.makedirs(plots_dir, exist_ok=True)
 os.makedirs(results_dir, exist_ok=True)
 
 # 2. Load and Prepare Data
-file_path = 'data/processed/Simple.xlsx'
+file_path = 'data/processed/DiurnoImputado.xlsx'
 df = pd.read_excel(file_path, engine='openpyxl')
 df['FECHA'] = pd.to_datetime(df['FECHA'])
 dates = df['FECHA']
@@ -28,8 +28,10 @@ inertia_records = []
 
 # 3. Execution Loop
 # Settings for 2x3x10 iterations
-data_modes = {'Scaled': X_scaled, 'Original': X_orig}
+# data_modes = {'Scaled': X_scaled, 'Original': X_orig}
+data_modes = {'Original': X_orig}
 n_clusters_list = [2, 3, 4]
+n_clusters_list = [4]
 seeds = range(42, 52) # 10 different seeds
 
 for mode_name, data in data_modes.items():
