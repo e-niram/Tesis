@@ -2,7 +2,7 @@ import pandas as pd
 import os
 
 # 1. Load the dataset
-file_path = 'data/processed/LAeqDiurno.csv'
+file_path = 'data/processed/LAeqNocturno.csv'
 df = pd.read_csv(file_path, sep=';')
 
 # 2. Identify rows with zero missing values
@@ -20,7 +20,7 @@ if not complete_cases.empty:
     df_filtered = df.iloc[first_complete_idx:].copy()
 
     # 4. Save the cleaned document
-    output_path = 'data/processed/LAeqDiurnoFiltrado.csv'
+    output_path = 'data/processed/LAeqNocturnoFiltrado.csv'
     
     # Ensure the directory exists
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
