@@ -30,8 +30,8 @@ inertia_records = []
 # Settings for 2x3x10 iterations
 # data_modes = {'Scaled': X_scaled, 'Original': X_orig}
 data_modes = {'Original': X_orig}
-n_clusters_list = [2, 3, 4]
-n_clusters_list = [4]
+# n_clusters_list = [2, 3, 4]
+n_clusters_list = [3]
 seeds = range(42, 52) # 10 different seeds
 
 for mode_name, data in data_modes.items():
@@ -44,7 +44,7 @@ for mode_name, data in data_modes.items():
             # Initialize and fit model
             model = TimeSeriesKMeans(
                 n_clusters=n_clusters,
-                metric="dtw",
+                metric="dtw", # Probar con distancia euclidea
                 max_iter=10,
                 random_state=seed,
                 n_jobs=-1,
