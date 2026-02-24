@@ -13,7 +13,7 @@ os.makedirs(plots_dir, exist_ok=True)
 os.makedirs(results_dir, exist_ok=True)
 
 # 2. Load and Prepare Data
-file_path = 'data/processed/DiurnoImputado.xlsx'
+file_path = 'data/processed/NocturnoImputado.xlsx'
 df = pd.read_excel(file_path, engine='openpyxl')
 df['FECHA'] = pd.to_datetime(df['FECHA'])
 dates = df['FECHA']
@@ -31,7 +31,7 @@ inertia_records = []
 # data_modes = {'Scaled': X_scaled, 'Original': X_orig}
 data_modes = {'Original': X_orig}
 # n_clusters_list = [2, 3, 4]
-n_clusters_list = [3]
+n_clusters_list = [4]
 seeds = range(42, 52) # 10 different seeds
 
 for mode_name, data in data_modes.items():
@@ -39,7 +39,7 @@ for mode_name, data in data_modes.items():
     
     for n_clusters in n_clusters_list:
         for seed in seeds:
-            run_id = f"{mode_name}_k{n_clusters}_s{seed}"
+            run_id = f"Nocturno_{mode_name}_k{n_clusters}_s{seed}"
             
             # Initialize and fit model
             model = TimeSeriesKMeans(
@@ -78,8 +78,15 @@ for mode_name, data in data_modes.items():
                     ax.plot(dates, series.ravel(), color='grey', alpha=0.2)
                 
                 ax.plot(dates, model.cluster_centers_[i].ravel(), color='red', linewidth=2)
-                ax.set_title(f'Cluster {i} - Stations: {len(cluster_series)}')
-                ax.set_ylabel('Value' if mode_name == 'Scaled' else 'dB')
+                ax.set_title(f'Clúster {i} - Cantidad de Estaciones: {len(cluster_series)}')
+                ax.set_ylabel('Desviaciones con respecto a la media' if mode_name == 'Scaled' else 'Decibeles (dB)')
+
+                # Apply fixed scale only to Original (dB) data
+                if mode_name == 'Original':
+                    ax.set_ylim([30, 105])
+                else:
+                    # For Scaled data, a range of -4 to 4 is usually ideal for visualization
+                    ax.set_ylim([-4, 4])
                 
                 ax.xaxis.set_major_locator(mdates.AutoDateLocator())
                 ax.xaxis.set_major_formatter(mdates.DateFormatter('%b %Y'))
@@ -92,6 +99,6 @@ for mode_name, data in data_modes.items():
 
 # 4. Final Save of Inertia Summary
 inertia_df = pd.DataFrame(inertia_records)
-inertia_df.to_csv(f"{results_dir}/Inertia_Summary.csv", index=False, sep=';')
+inertia_df.to_csv(f"{results_dir}/Inertia_Summary_{run_id}.csv", index=False, sep=';')
 
 print("Process finished. 60 iterations saved in data/clustering/")
