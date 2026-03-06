@@ -30,20 +30,20 @@ def analyze_weekly_seasonality(file_path, column_name, lags=35):
     
     # ACF
     plot_acf(series, lags=lags, ax=ax1, color='teal', alpha=0.05)
-    ax1.set_title(f'ACF - {column_name} (Identificación de Estacionalidad)')
-    ax1.set_xlabel('Lags (Días)')
+    ax1.set_title(f'ACF - Plaza del Carmen (Diurno)')
+    ax1.set_xlabel('Retardos (Días)')
     # Resaltar múltiplos de 7
     for day in range(7, lags + 1, 7):
         ax1.axvline(x=day, color='orange', linestyle='--', alpha=0.5, label='Ciclo Semanal' if day==7 else "")
 
     # PACF
     plot_pacf(series, lags=lags, ax=ax2, color='darkblue', alpha=0.05, method='ywm')
-    ax2.set_title(f'PACF - {column_name} (Correlación Directa)')
-    ax2.set_xlabel('Lags (Días)')
+    ax2.set_title(f'PACF - Plaza del Carmen (Diurno)')
+    ax2.set_xlabel('Retardos (Días)')
 
     plt.tight_layout()
     plt.show()
 
 # Ejecución (ajusta a tu archivo)
-file_path = 'data/processed/LAeqNocturnoFiltrado.csv'
-analyze_weekly_seasonality(file_path, '19')
+file_path = 'data/processed/LAeqDiurno.csv'
+analyze_weekly_seasonality(file_path, '3')
