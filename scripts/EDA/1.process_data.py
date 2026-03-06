@@ -32,7 +32,7 @@ def clean_data(df):
     df = df.sort_values(["FECHA"]).reset_index(drop=True)
     
     # Save the result
-    # save_to_csv(df, f"ruido_processed.csv")
+    save_to_csv(df, f"ruido_processed_full.csv")
     
     return df
 
@@ -107,12 +107,14 @@ def save_to_csv(df, filename="processed_data.csv"):
     df.to_csv(path, index=False, sep=';')
     print(f"File successfully saved to: {path}")
 
-# Usage example:
-# df_cleaned = clean_data(original_df, "14")
-
-
 import pandas as pd
 
 # Cargar el archivo CSV
-df = pd.read_csv("data/raw/ruido.csv", delimiter=";", on_bad_lines='warn')
+df = pd.read_csv(
+    "data/raw/ruidoFull.csv", 
+    delimiter=";", 
+    decimal=",", 
+    encoding="latin-1", 
+    on_bad_lines='warn'
+)
 clean_data(df)

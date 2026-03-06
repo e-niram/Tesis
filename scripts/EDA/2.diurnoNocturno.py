@@ -37,7 +37,7 @@ def save_split_file(df, filename):
 
 def generate_split_noise_files():
     """Orquestador para generar los archivos de Diurno y Nocturno."""
-    input_file = "data/processed/ruido_processed.csv"
+    input_file = "data/processed/ruido_processed_full.csv"
     
     if not os.path.exists(input_file):
         print(f"Error: No se encuentra el archivo {input_file}")
@@ -48,11 +48,11 @@ def generate_split_noise_files():
     
     # 2. Procesar Diurno
     df_diurno = pivot_noise_metric(df, 'LAeqDiurno')
-    save_split_file(df_diurno, "LAeqDiurno.csv")
+    save_split_file(df_diurno, "Diurno.csv")
     
     # 3. Procesar Nocturno
     df_nocturno = pivot_noise_metric(df, 'LAeqNocturno')
-    save_split_file(df_nocturno, "LAeqNocturno.csv")
+    save_split_file(df_nocturno, "Nocturno.csv")
 
 
 generate_split_noise_files()
