@@ -5,16 +5,18 @@ import os
 from tslearn.clustering import TimeSeriesKMeans
 from tslearn.preprocessing import TimeSeriesScalerMeanVariance
 
+PERIOD = "Nocturno"
+
 # 1. Setup paths and directories
 base_dir = 'data/clustering'
-plots_dir = os.path.join(base_dir, 'automatedplots')
-results_dir = os.path.join(base_dir, 'automatedresults')
+plots_dir = os.path.join(base_dir, 'automatedplots3')
+results_dir = os.path.join(base_dir, 'automatedresults3')
 os.makedirs(plots_dir, exist_ok=True)
 os.makedirs(results_dir, exist_ok=True)
 
 # 2. Load and Prepare Data
-file_path = 'data/processed/NocturnoImputado.xlsx'
-df = pd.read_excel(file_path, engine='openpyxl')
+file_path = f'data/processed/LAeq{PERIOD}Final.csv'
+df = pd.read_csv(file_path, sep=';')
 df['FECHA'] = pd.to_datetime(df['FECHA'])
 dates = df['FECHA']
 
@@ -31,15 +33,15 @@ inertia_records = []
 # data_modes = {'Scaled': X_scaled, 'Original': X_orig}
 data_modes = {'Original': X_orig}
 # n_clusters_list = [2, 3, 4]
-n_clusters_list = [4]
-seeds = range(42, 52) # 10 different seeds
+n_clusters_list = [3]
+seeds = range(49, 55) # 10 different seeds
 
 for mode_name, data in data_modes.items():
     print(f"Processing mode: {mode_name}...")
     
     for n_clusters in n_clusters_list:
         for seed in seeds:
-            run_id = f"Nocturno_{mode_name}_k{n_clusters}_s{seed}"
+            run_id = f"{PERIOD}_{mode_name}_k{n_clusters}_s{seed}"
             
             # Initialize and fit model
             model = TimeSeriesKMeans(
