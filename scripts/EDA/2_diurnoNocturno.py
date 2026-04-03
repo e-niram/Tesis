@@ -37,7 +37,7 @@ def save_split_file(df, filename):
 
 def generate_split_noise_files():
     """Orquestador para generar los archivos de Diurno y Nocturno."""
-    input_file = "data/processed/ruido_processed_full.csv"
+    input_file = "data/processed/ruido_processed.csv"
     
     if not os.path.exists(input_file):
         print(f"Error: No se encuentra el archivo {input_file}")

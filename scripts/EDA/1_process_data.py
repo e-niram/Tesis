@@ -32,7 +32,7 @@ def clean_data(df):
     df = df.sort_values(["FECHA"]).reset_index(drop=True)
     
     # Save the result
-    save_to_csv(df, f"ruido_processed_full.csv")
+    save_to_csv(df, f"ruido_processed.csv")
     
     return df
 
