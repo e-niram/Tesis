@@ -8,7 +8,7 @@ from tslearn.preprocessing import TimeSeriesScalerMeanVariance
 PERIOD = "Nocturno"
 
 # 1. Setup paths and directories
-base_dir = 'data/clustering'
+base_dir = 'results/clustering'
 plots_dir = os.path.join(base_dir, 'automatedplots3')
 results_dir = os.path.join(base_dir, 'automatedresults3')
 os.makedirs(plots_dir, exist_ok=True)
