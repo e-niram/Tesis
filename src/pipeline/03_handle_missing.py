@@ -3,7 +3,7 @@ import numpy as np
 import os
 import matplotlib.pyplot as plt
 import seaborn as sns
-from scripts.constants import STATIONS
+from src.constants import STATIONS
 
 # ==========================================
 # 1. PHYSICAL CONVERSION UTILITIES
@@ -67,7 +67,7 @@ def apply_integrity_filter(df):
 def process_and_synchronize_noise_data(period):
     """Main orchestrator for the data preparation stage."""
     input_file = f'data/processed/{period}.csv'
-    output_file = f'data/processed/{period}Filtrado_Pressure.csv'
+    output_file = f'data/processed/{period}_pressure.csv'
     
     if not os.path.exists(input_file):
         print(f"Error: {input_file} not found.")
@@ -138,8 +138,8 @@ def missing_values_statistics(period):
 
 def run_imputation_pipeline(period):
     """Executes seasonal and linear imputation in the pressure domain."""
-    input_path = f'data/processed/{period}Filtrado_Pressure.csv'
-    final_output = f'data/final/{period}Final.csv'
+    input_path = f'data/processed/{period}_pressure.csv'
+    final_output = f'data/final/{period}_final.csv'
     
     if not os.path.exists(input_path): return
     
@@ -180,7 +180,7 @@ def run_imputation_pipeline(period):
 # ==========================================
 
 if __name__ == "__main__":
-    PERIODS = ["Diurno", "Nocturno"]
+    PERIODS = ["daytime", "nighttime"]
     
     for p in PERIODS:
         print(f"\n{'#'*50}\n# STARTING PROCESS FOR: {p.upper()}\n{'#'*50}")

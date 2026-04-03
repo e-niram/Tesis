@@ -4,9 +4,9 @@ import contextily as ctx
 from shapely.geometry import Point
 import geopandas as gpd
 
-from constants import COORDINATES
+from src.constants import COORDINATES
 
-def generate_pro_map(csv_path, output_path='data/clustering/madrid_map_nocturno.pdf'):
+def generate_pro_map(csv_path, output_path='results/clustering/madrid_map_nighttime.pdf'):
     results_df = pd.read_csv(csv_path, sep=';')
     df_coords = pd.DataFrame.from_dict(COORDINATES, orient='index', columns=['lat', 'lon']).reset_index()
     df_coords.columns = ['Station_ID', 'lat', 'lon']
@@ -50,5 +50,5 @@ def generate_pro_map(csv_path, output_path='data/clustering/madrid_map_nocturno.
     print(f"Archivos guardados: {output_path} (Vectorial) y versión PNG.")
 
 # Ejecución
-csv_input = 'data/clustering/automatedresults/Results_Nocturno_Original_k3_s51.csv'
+csv_input = 'results/clustering/metrics/Results_nighttime_Original_k3_s51.csv'
 generate_pro_map(csv_input)

@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 
-PERIOD='Nocturno'
+PERIOD='nighttime'
 
 def db_to_pressure(db):
     """Convierte decibelios a presión acústica (escala lineal)."""
@@ -15,9 +15,9 @@ def pressure_to_db(p):
 
 def calculate_cluster_means():
     # 1. Configuración de rutas
-    mapping_path = f'data/clustering/automatedresults3/Results_{PERIOD}_Original_k3_s49.csv'
-    data_path = f'data/processed/LAeq{PERIOD}Final.csv'
-    output_csv = f'data/clustering/automatedresults3/Cluster_Means_{PERIOD}.csv'
+    mapping_path = f'results/clustering/metrics/Results_{PERIOD}_Original_k3_s49.csv'
+    data_path = f'data/final/{PERIOD}_final.csv'
+    output_csv = f'results/clustering/metrics/Cluster_Means_{PERIOD}.csv'
     
     # Nombres de los dos archivos de salida
     img_individual = f'cluster_{PERIOD}_profiles_individuales.png'

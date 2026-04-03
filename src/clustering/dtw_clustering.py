@@ -5,17 +5,17 @@ import os
 from tslearn.clustering import TimeSeriesKMeans
 from tslearn.preprocessing import TimeSeriesScalerMeanVariance
 
-PERIOD = "Nocturno"
+PERIOD = "nighttime"
 
 # 1. Setup paths and directories
 base_dir = 'results/clustering'
-plots_dir = os.path.join(base_dir, 'automatedplots3')
-results_dir = os.path.join(base_dir, 'automatedresults3')
+plots_dir = os.path.join(base_dir, 'plots')
+results_dir = os.path.join(base_dir, 'metrics')
 os.makedirs(plots_dir, exist_ok=True)
 os.makedirs(results_dir, exist_ok=True)
 
 # 2. Load and Prepare Data
-file_path = f'data/processed/LAeq{PERIOD}Final.csv'
+file_path = f'data/final/{PERIOD}_final.csv'
 df = pd.read_csv(file_path, sep=';')
 df['FECHA'] = pd.to_datetime(df['FECHA'])
 dates = df['FECHA']

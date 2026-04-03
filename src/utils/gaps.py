@@ -10,37 +10,36 @@ def audit_and_clean_gaps(file_path, threshold_cubic=14, threshold_seasonal=60, t
     df = pd.read_csv(file_path, sep=';')
     df['FECHA'] = pd.to_datetime(df['FECHA'])
     df.set_index('FECHA', inplace=True)
-    
+
     stations = [col for col in df.columns]
     total_days = len(df)
-    
+
     results = {
-        'Cubic': [],     
-        'Seasonal': [],  
-        'Discard': []    
+        'Cubic': [],
+        'Seasonal': [],
+        'Discard': []
     }
 
     print(f"--- Comprehensive Gap Audit (TFM - Acoustic Data) ---")
-    
+
     for col in stations:
         is_na = df[col].isna()
         missing_count = is_na.sum()
         missing_pct = (missing_count / total_days) * 100
-        
+
         # Identify all gap lengths
         gap_groups = (is_na != is_na.shift()).cumsum()
-        # This creates a list of lengths for every NaN block found
         all_gaps = is_na[is_na].groupby(gap_groups[is_na]).sum().astype(int).tolist()
-        
+
         max_gap = max(all_gaps) if all_gaps else 0
-        
+
         stats = {
             'id': col,
             'max_gap': max_gap,
             'all_gaps': all_gaps,
             'missing_pct': round(missing_pct, 2)
         }
-        
+
         # Categorization Logic
         if missing_pct > threshold_pct:
             results['Discard'].append(stats)
@@ -60,8 +59,7 @@ def audit_and_clean_gaps(file_path, threshold_cubic=14, threshold_seasonal=60, t
         if not stations_list:
             print("No stations in this group.")
             return
-        
-        # Header with All Gaps column
+
         print(f"{'ID':<12} | {'Max Gap':<8} | {'Missing %':<10} | {'All Gap Lengths (Days)'}")
         print("-" * 80)
         for s in stations_list:
@@ -72,9 +70,9 @@ def audit_and_clean_gaps(file_path, threshold_cubic=14, threshold_seasonal=60, t
     print_group("CUBIC", results['Cubic'], f"Max gap <= {threshold_cubic}d & Missing < {threshold_pct}%")
     print_group("SEASONAL", results['Seasonal'], f"{threshold_cubic}d < Max gap <= {threshold_seasonal}d & Missing < {threshold_pct}%")
     print_group("DISCARD", results['Discard'], f"Max gap > {threshold_seasonal}d OR Missing > {threshold_pct}%")
-    
+
     return results
 
 # Execution
-file_path = 'data/processed/LAeqNocturnoFiltrado.csv'
+file_path = 'data/processed/nighttime_pressure.csv'
 grupos = audit_and_clean_gaps(file_path)
