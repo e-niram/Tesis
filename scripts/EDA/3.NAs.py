@@ -3,8 +3,7 @@ import numpy as np
 import os
 import matplotlib.pyplot as plt
 import seaborn as sns
-
-PERIOD = "Nocturno"
+from scripts.constants import STATIONS
 
 # ==========================================
 # 1. PHYSICAL CONVERSION UTILITIES
@@ -16,7 +15,6 @@ def db_to_pressure(db):
 
 def pressure_to_db(p):
     """Converts Sound Pressure back to Decibels (dB)."""
-    # Uses a small floor value to avoid log10(0)
     return 20 * np.log10(np.where(p > 0, p, 1e-12))
 
 # ==========================================
@@ -30,37 +28,46 @@ def load_and_prepare_dataset(file_path):
     return df
 
 def synchronize_timeline(df):
-    """Inserts rows for missing dates to ensure a continuous daily index."""
-    full_range = pd.date_range(start=df['FECHA'].min(), end=df['FECHA'].max(), freq='D')
+    """Inserts rows for missing dates to ensure a continuous daily index, excluding 2026."""
+    # 1. Define the initial range
+    start_date = df['FECHA'].min()
+    end_date = df['FECHA'].max()
+    
+    # 2. Force the end_date to not exceed the last day of 2025
+    limit_date = pd.Timestamp('2025-12-31')
+    if end_date > limit_date:
+        end_date = limit_date
+        print(f"Timeline Clip: Data restricted to end at {limit_date.date()}")
+
+    full_range = pd.date_range(start=start_date, end=end_date, freq='D')
+    
+    # 3. Filter the original dataframe to remove any 2026 rows before reindexing
+    df = df[df['FECHA'] <= limit_date]
     df = df.set_index('FECHA')
     
-    # Reindexing inserts NaNs where dates were missing in the original file
+    # 4. Reindex to the cleaned range
     df_sync = df.reindex(full_range)
     df_sync.index.name = 'FECHA'
     
     missing_dates = len(full_range) - len(df)
     if missing_dates > 0:
-        print(f"Timeline Synchronization: {missing_dates} missing dates inserted as NaNs.")
+        print(f"Timeline Synchronization: {missing_dates} missing dates inserted.")
     
     return df_sync
 
 def apply_integrity_filter(df):
     """Slices the dataframe to start only from the first row with 0 missing values."""
     complete_cases = df.dropna()
-
     if complete_cases.empty:
-        print("Integrity Filter Warning: No rows with complete data found.")
         return pd.DataFrame()
 
     first_valid_date = complete_cases.index[0]
-    print(f"Integrity Filter: Data sequence starts from {first_valid_date.date()}")
-    
     return df.loc[first_valid_date:].copy()
 
-def process_and_synchronize_noise_data():
+def process_and_synchronize_noise_data(period):
     """Main orchestrator for the data preparation stage."""
-    input_file = f'data/processed/LAeq{PERIOD}.csv'
-    output_file = f'data/processed/LAeq{PERIOD}Filtrado_Pressure.csv'
+    input_file = f'data/processed/{period}.csv'
+    output_file = f'data/processed/{period}Filtrado_Pressure.csv'
     
     if not os.path.exists(input_file):
         print(f"Error: {input_file} not found.")
@@ -71,46 +78,28 @@ def process_and_synchronize_noise_data():
     filtered_df = apply_integrity_filter(synced_df)
     
     if not filtered_df.empty:
-        # Convert to linear pressure scale before saving for the rest of the pipeline
         df_pressure = filtered_df.apply(db_to_pressure)
         os.makedirs(os.path.dirname(output_file), exist_ok=True)
         df_pressure.to_csv(output_file, sep=';')
-        print(f"Synchronization complete. File saved in Pressure scale.")
+        print(f"[{period}] Synchronization complete. Saved in Pressure scale.")
 
 # ==========================================
 # 3. AUDIT & STATISTICS
 # ==========================================
 
-# ==========================================
-# 3. AUDIT & STATISTICS
-# ==========================================
-
-def missing_values_statistics():
-    file_path = f'data/processed/LAeq{PERIOD}.csv'
+def missing_values_statistics(period):
+    file_path = f'data/processed/{period}.csv'
     if not os.path.exists(file_path): return
 
-    # Cargamos el dataframe filtrado
     df = pd.read_csv(file_path, sep=';', index_col=0)
     total_rows = len(df)
 
-    # Diccionario de Nombres de Estaciones (Completa con los de tu dataset)
-    # Esto es lo que dará el "WOW" en la tabla de la tesis
-    nombres_estaciones = {
-        "1": "Paseo de Recoletos",
-        "3": "Plaza del Carmen",
-        "4": "Plaza de España",
-        "11": "Avda. Ramón y Cajal",
-        "24": "Casa de Campo",
-        "55": "Urb. Embajada (Barajas)",
-        "86": "Tres Olivos"
-    }
-
-    # 1. CÁLCULO DE TABLA DE NAs POR ESTACIÓN (Para Tabla 3.1)
     stats_list = []
     for col in df.columns:
         nas_count = df[col].isna().sum()
         pct_nas = (nas_count / total_rows) * 100
-        nombre = nombres_estaciones.get(col, "Estación " + col)
+        # Use imported STATIONS constant
+        nombre = STATIONS.get(col, f"Estación {col}")
         
         stats_list.append({
             "ID": col,
@@ -119,18 +108,11 @@ def missing_values_statistics():
             "Porcentaje (%)": round(pct_nas, 2)
         })
 
-    # Crear DataFrame de estadísticas y ordenar por mayor cantidad de NAs
-    df_nas_ranking = pd.DataFrame(stats_list)
-    df_nas_ranking = df_nas_ranking.sort_values(by="Cantidad (NAs)", ascending=False)
+    df_nas_ranking = pd.DataFrame(stats_list).sort_values(by="Cantidad (NAs)", ascending=False)
 
-    print("\n" + "="*85)
-    print("TOP ESTACIONES CON MÁS VALORES AUSENTES (PARA TABLA LATEX)")
-    print("="*85)
-    # Mostramos las top 10 o las que necesites para la tesis
+    print(f"\n{'='*30} {period.upper()} STATS {'='*30}")
     print(df_nas_ranking.head(10).to_string(index=False))
-    print("="*85)
 
-    # 2. CÁLCULO DE DISTRIBUCIÓN DE GAPS (Análisis de Robustez)
     all_gap_lengths = []
     for col in df.columns:
         is_na = df[col].isna()
@@ -144,33 +126,29 @@ def missing_values_statistics():
         gaps_gt_14 = len([g for g in all_gap_lengths if g > 14])
         
         summary_data = {
-            "Categoría de Gap": ["Pequeño/Medio (<= 14 días)", "Grande (> 14 días)"],
+            "Categoría": ["<= 14 días", "> 14 días"],
             "Frecuencia": [gaps_le_14, gaps_gt_14],
-            "Porcentaje": [f"{(gaps_le_14/total_gaps)*100:.2f}%", f"{(gaps_gt_14/total_gaps)*100:.2f}%"],
-            "Método Asignado": ["Estacional (Contexto Acústico)", "Lineal (Fallback Energético)"]
+            "Método": ["Estacional (k=3)", "Lineal (Pressure)"]
         }
-        
-        print("\nRESUMEN METODOLÓGICO DE IMPUTACIÓN")
         print(pd.DataFrame(summary_data).to_string(index=False))
-        print(f"\nTotal de eventos de pérdida de datos analizados: {total_gaps}")
 
 # ==========================================
 # 4. IMPUTATION PIPELINE
 # ==========================================
 
-def run_imputation_pipeline():
+def run_imputation_pipeline(period):
     """Executes seasonal and linear imputation in the pressure domain."""
-    input_path = f'data/processed/LAeq{PERIOD}Filtrado_Pressure.csv'
-    final_output = f'data/processed/LAeq{PERIOD}Final.csv'
+    input_path = f'data/processed/{period}Filtrado_Pressure.csv'
+    final_output = f'data/final/{period}Final.csv'
     
     if not os.path.exists(input_path): return
     
     df = pd.read_csv(input_path, sep=';', index_col=0)
     df.index = pd.to_datetime(df.index)
     
+    print(f"\n--- Processing Imputation for {period} ---")
+    
     # STEP 1: Seasonal Imputation (Gap <= 14 days)
-    # Using 3-Nearest Neighbors logic based on Day of Week
-    print("\n[1/3] Executing Seasonal Imputation (k=3, gap <= 14d)...")
     for col in df.columns:
         is_na = df[col].isna()
         gap_groups = (is_na != is_na.shift()).cumsum()
@@ -180,41 +158,38 @@ def run_imputation_pipeline():
                 for idx in group_data.index:
                     neighbors = []
                     step = 1
-                    # Search up to 12 weeks away for neighbors
                     while len(neighbors) < 3 and step < 12:
                         for direction in [-1, 1]:
                             n_idx = idx + pd.Timedelta(days=7 * step * direction)
                             if n_idx in df.index and not np.isnan(df.loc[n_idx, col]):
                                 neighbors.append(df.loc[n_idx, col])
                         step += 1
-                    
                     if neighbors:
                         df.loc[idx, col] = np.mean(neighbors[:3])
 
     # STEP 2: Linear Fallback
-    # Fills remaining gaps (> 14 days) using linear interpolation in the pressure domain
-    print("[2/3] Executing Linear Fallback (Energy-linear interpolation)...")
     df = df.interpolate(method='linear').bfill().ffill()
 
     # STEP 3: Re-conversion to Decibels
-    print("[3/3] Converting results back to Decibels (dB)...")
     df_db = df.apply(pressure_to_db).round(2)
-    
-    # Save Final Result
     df_db.to_csv(final_output, sep=';')
-    print(f"\nPipeline finished successfully.")
-    print(f"Final dataset saved to: {final_output}")
+    print(f"Pipeline finished for {period}. Result saved.")
 
 # ==========================================
-# MAIN EXECUTION
+# MAIN EXECUTION (AUTOMATED)
 # ==========================================
 
 if __name__ == "__main__":
-    # Stage 1: Prep and Sync
-    # process_and_synchronize_noise_data()
+    PERIODS = ["Diurno", "Nocturno"]
     
-    # Stage 2: Audit
-    # missing_values_statistics()
-    
-    # Stage 3: Impute
-    run_imputation_pipeline()
+    for p in PERIODS:
+        print(f"\n{'#'*50}\n# STARTING PROCESS FOR: {p.upper()}\n{'#'*50}")
+        
+        # Step 1: Prep
+        process_and_synchronize_noise_data(p)
+        
+        # Step 2: Statistics
+        missing_values_statistics(p)
+        
+        # Step 3: Imputation
+        run_imputation_pipeline(p)
