@@ -1,41 +1,25 @@
 import pandas as pd
-import os
 
-def remove_station(station_id, input_path='data/processed/LAeqDiurnoFiltrado_Pressure.csv', output_path=None):
+
+HIGH_NA_THRESHOLD = 0.20
+
+
+def filter_stations_by_na_threshold(df: pd.DataFrame, threshold: float = HIGH_NA_THRESHOLD) -> pd.DataFrame:
     """
-    Removes a specific station from the dataset to prevent using synthetic data.
+    Drops columns whose proportion of NaN values exceeds the given threshold.
+
+    Should be applied to the raw (pre-imputation) pressure DataFrame so that
+    the threshold reflects real missing data, not imputed values.
+
+    Returns the filtered DataFrame and prints which stations were removed.
     """
-    # Verify file existence
-    if not os.path.exists(input_path):
-        print(f"Error: El archivo {input_path} no existe.")
-        return
+    na_ratios = df.isna().mean()
+    to_drop = na_ratios[na_ratios > threshold].index.tolist()
 
-    # 1. Load the dataset
-    # We maintain the FECHA index to preserve time series structure
-    df = pd.read_csv(input_path, sep=';', index_col=0)
-    
-    # Ensure ID is handled as a string
-    col_name = str(station_id)
-
-    # 2. Check existence and drop the column
-    if col_name in df.columns:
-        df_cleaned = df.drop(columns=[col_name])
-        print(f"La estación {col_name} ha sido eliminada exitosamente.")
-        
-        # 3. Save changes
-        save_path = output_path if output_path else input_path
-        df_cleaned.to_csv(save_path, sep=';')
-        print(f"Dataset actualizado guardado en: {save_path}")
-        print(f"Dimensiones finales del dataset: {df_cleaned.shape}")
+    if to_drop:
+        print(f"Stations removed (>{threshold*100:.0f}% NAs): {to_drop}")
+        df = df.drop(columns=to_drop)
     else:
-        print(f"Aviso: La estación {col_name} no se encontró en el archivo.")
+        print(f"No stations exceeded the {threshold*100:.0f}% NA threshold.")
 
-# ==========================================
-# EXECUTION (Example usage)
-# ==========================================
-if __name__ == "__main__":
-    # Path to the processed data
-    input_file = 'data/processed/LAeqNocturnoFinal.csv'
-    
-    # Example: Removing 'Plaza de España' (ID 4) as discussed in your audit
-    remove_station('4', input_path=input_file)
+    return df

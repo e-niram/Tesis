@@ -1,9 +1,10 @@
+import os
 import pandas as pd
 import numpy as np
-import os
 import matplotlib.pyplot as plt
 import seaborn as sns
 from src.constants import STATIONS
+from src.analysis.filter_stations import filter_stations_by_na_threshold
 
 # ==========================================
 # 1. PHYSICAL CONVERSION UTILITIES
@@ -99,7 +100,7 @@ def missing_values_statistics(period):
         nas_count = df[col].isna().sum()
         pct_nas = (nas_count / total_rows) * 100
         # Use imported STATIONS constant
-        nombre = STATIONS.get(col, f"Estación {col}")
+        nombre = STATIONS.get(int(col), f"Estación {col}")
         
         stats_list.append({
             "ID": col,
@@ -145,7 +146,10 @@ def run_imputation_pipeline(period):
     
     df = pd.read_csv(input_path, sep=';', index_col=0)
     df.index = pd.to_datetime(df.index)
-    
+
+    # Filter out stations with too many missing values before imputation
+    df = filter_stations_by_na_threshold(df)
+
     print(f"\n--- Processing Imputation for {period} ---")
     
     # STEP 1: Seasonal Imputation (Gap <= 14 days)
