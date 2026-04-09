@@ -55,15 +55,16 @@ def calculate_cluster_means(period, mapping_path):
     overall_means = {c: cluster_means_df[f'Cluster_{c}'].mean()
                      for c in clusters if f'Cluster_{c}' in cluster_means_df.columns}
     rank = sorted(overall_means, key=overall_means.get)  # ascending
-    color_map  = {rank[0]: 'green', rank[1]: '#CC8400', rank[2]: 'red'}
-    label_map  = {rank[0]: 'Ruido bajo', rank[1]: 'Ruido medio', rank[2]: 'Ruido alto'}
+    color_map    = {rank[0]: 'green', rank[1]: '#CC8400', rank[2]: 'red'}
+    label_map    = {rank[0]: 'Ruido bajo', rank[1]: 'Ruido medio', rank[2]: 'Ruido alto'}
+    display_order = [rank[2], rank[1], rank[0]]  # Red → Yellow → Green
 
     os.makedirs(os.path.dirname(img_individual), exist_ok=True)
 
     # Image 1: individual subplots
     fig1, axes = plt.subplots(nrows=len(clusters), ncols=1, figsize=(12, 15), sharex=True)
 
-    for i, c in enumerate(clusters):
+    for i, c in enumerate(display_order):
         col = f'Cluster_{c}'
         if col in cluster_means_df.columns:
             ax = axes[i]
@@ -83,7 +84,7 @@ def calculate_cluster_means(period, mapping_path):
     # Image 2: overlaid plot
     fig2, ax2 = plt.subplots(figsize=(12, 7))
 
-    for c in clusters:
+    for c in display_order:
         col = f'Cluster_{c}'
         if col in cluster_means_df.columns:
             ax2.plot(cluster_means_df.index, cluster_means_df[col],
