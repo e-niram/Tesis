@@ -37,7 +37,7 @@ LIBNAME mydata "/home/u64274668/TFM/Datos/";
 
 /* ---------------------------------------------------------- */
 %MACRO rolling_forecast_arima(input_ds, target_var, cluster_id=cluster_0,
-   train_obs=3500, lead=14);
+   time_period=daytime, train_obs=3500, lead=14);
 
    %LOCAL total_obs current_end window_num;
 
@@ -185,12 +185,12 @@ LIBNAME mydata "/home/u64274668/TFM/Datos/";
 
    /* --- 5. Export to persistent CSV files (downloadable from ODA) --- */
    PROC EXPORT DATA=work.all_forecasts_arima
-      OUTFILE="/home/u64274668/sasuser.v94/rolling_forecasts_daytime_&cluster_id._arima.csv"
+      OUTFILE="/home/u64274668/sasuser.v94/rolling_forecasts_&time_period._&cluster_id._arima.csv"
       DBMS=CSV REPLACE;
    RUN;
 
    PROC EXPORT DATA=work.forecast_metrics_arima
-      OUTFILE="/home/u64274668/sasuser.v94/forecast_metrics_daytime_&cluster_id._arima.csv"
+      OUTFILE="/home/u64274668/sasuser.v94/forecast_metrics_&time_period._&cluster_id._arima.csv"
       DBMS=CSV REPLACE;
    RUN;
 
@@ -214,6 +214,16 @@ lead       : 14  = predict the next 14 days each window
 
 %rolling_forecast_arima(TFM.ClusterMeansDaytime, Cluster_2,
    cluster_id=cluster_2, train_obs=3500, lead=14);
+
+/* --- nighttime --- */
+%rolling_forecast_arima(TFM.ClusterMeansNighttime, Cluster_0,
+   cluster_id=cluster_0, time_period=nighttime, train_obs=3500, lead=14);
+
+%rolling_forecast_arima(TFM.ClusterMeansNighttime, Cluster_1,
+   cluster_id=cluster_1, time_period=nighttime, train_obs=3500, lead=14);
+
+%rolling_forecast_arima(TFM.ClusterMeansNighttime, Cluster_2,
+   cluster_id=cluster_2, time_period=nighttime, train_obs=3500, lead=14);
 
 /* ============================================================
 Display results (last cluster processed)

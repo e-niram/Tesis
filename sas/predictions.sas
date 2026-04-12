@@ -29,7 +29,7 @@ LIBNAME mydata "/home/u64274668/TFM/Datos/";
 
 /* ---------------------------------------------------------- */
 %MACRO rolling_forecast(input_ds, target_var, cluster_id=cluster_0,
-   model_name=double, train_obs=3500, lead=14);
+   model_name=double, time_period=daytime, train_obs=3500, lead=14);
 
    %LOCAL total_obs current_end window_num;
 
@@ -159,12 +159,12 @@ LIBNAME mydata "/home/u64274668/TFM/Datos/";
 
    /* --- 5. Export to persistent CSV files (downloadable from ODA) --- */
    PROC EXPORT DATA=work.all_forecasts
-      OUTFILE="/home/u64274668/sasuser.v94/rolling_forecasts_daytime_&cluster_id._&model_name..csv"
+      OUTFILE="/home/u64274668/sasuser.v94/rolling_forecasts_&time_period._&cluster_id._&model_name..csv"
       DBMS=CSV REPLACE;
    RUN;
 
    PROC EXPORT DATA=work.forecast_metrics
-      OUTFILE="/home/u64274668/sasuser.v94/forecast_metrics_daytime_&cluster_id._&model_name..csv"
+      OUTFILE="/home/u64274668/sasuser.v94/forecast_metrics_&time_period._&cluster_id._&model_name..csv"
       DBMS=CSV REPLACE;
    RUN;
 
@@ -210,6 +210,36 @@ lead       : 14  = predict the next 14 days each window
    model_name=winters, train_obs=3500, lead=14);
 %rolling_forecast(TFM.ClusterMeansDaytime, Cluster_2, cluster_id=cluster_2,
    model_name=addwinters, train_obs=3500, lead=14);
+
+/* --- nighttime / cluster_0 --- */
+%rolling_forecast(TFM.ClusterMeansNighttime, Cluster_0, cluster_id=cluster_0,
+   model_name=double,     time_period=nighttime, train_obs=3500, lead=14);
+%rolling_forecast(TFM.ClusterMeansNighttime, Cluster_0, cluster_id=cluster_0,
+   model_name=seasonal,   time_period=nighttime, train_obs=3500, lead=14);
+%rolling_forecast(TFM.ClusterMeansNighttime, Cluster_0, cluster_id=cluster_0,
+   model_name=winters,    time_period=nighttime, train_obs=3500, lead=14);
+%rolling_forecast(TFM.ClusterMeansNighttime, Cluster_0, cluster_id=cluster_0,
+   model_name=addwinters, time_period=nighttime, train_obs=3500, lead=14);
+
+/* --- nighttime / cluster_1 --- */
+%rolling_forecast(TFM.ClusterMeansNighttime, Cluster_1, cluster_id=cluster_1,
+   model_name=double,     time_period=nighttime, train_obs=3500, lead=14);
+%rolling_forecast(TFM.ClusterMeansNighttime, Cluster_1, cluster_id=cluster_1,
+   model_name=seasonal,   time_period=nighttime, train_obs=3500, lead=14);
+%rolling_forecast(TFM.ClusterMeansNighttime, Cluster_1, cluster_id=cluster_1,
+   model_name=winters,    time_period=nighttime, train_obs=3500, lead=14);
+%rolling_forecast(TFM.ClusterMeansNighttime, Cluster_1, cluster_id=cluster_1,
+   model_name=addwinters, time_period=nighttime, train_obs=3500, lead=14);
+
+/* --- nighttime / cluster_2 --- */
+%rolling_forecast(TFM.ClusterMeansNighttime, Cluster_2, cluster_id=cluster_2,
+   model_name=double,     time_period=nighttime, train_obs=3500, lead=14);
+%rolling_forecast(TFM.ClusterMeansNighttime, Cluster_2, cluster_id=cluster_2,
+   model_name=seasonal,   time_period=nighttime, train_obs=3500, lead=14);
+%rolling_forecast(TFM.ClusterMeansNighttime, Cluster_2, cluster_id=cluster_2,
+   model_name=winters,    time_period=nighttime, train_obs=3500, lead=14);
+%rolling_forecast(TFM.ClusterMeansNighttime, Cluster_2, cluster_id=cluster_2,
+   model_name=addwinters, time_period=nighttime, train_obs=3500, lead=14);
 
 /* ============================================================
 Display results (last cluster/model processed)
