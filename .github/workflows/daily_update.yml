@@ -1,0 +1,50 @@
+name: Actualización diaria de predicciones
+
+on:
+  schedule:
+    # 08:00 UTC = 09:00 hora de Madrid (invierno) / 10:00 (verano, CEST)
+    # El API de Madrid publica los datos del día anterior antes de las 8h UTC.
+    - cron: '0 8 * * *'
+  workflow_dispatch:   # permite lanzarlo manualmente desde GitHub
+
+jobs:
+  update-predictions:
+    name: Fetch + Predict + Commit
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # para poder hacer git push al repo
+
+    steps:
+      - name: Checkout repositorio
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Configurar Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Obtener datos del día anterior (API Madrid)
+        run: python src/pipeline/04_fetch_api.py
+        # Si no hay datos para la fecha, el script sale con código 0 y no modifica nada.
+
+      - name: Actualizar predicciones (14 días)
+        run: python src/pipeline/05_update_predictions.py
+
+      - name: Confirmar y publicar cambios
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add app/data/predictions.json \
+                  data/final/daytime_final.csv \
+                  data/final/nighttime_final.csv \
+                  results/clustering/metrics/Cluster_Means_daytime.csv \
+                  results/clustering/metrics/Cluster_Means_nighttime.csv
+          git diff --cached --quiet && echo "Sin cambios nuevos." || \
+            git commit -m "chore: actualización diaria $(date -u +%Y-%m-%d)"
+          git push
