@@ -247,6 +247,9 @@ a:focus-visible {
 /* ── Loading ─────────────────────────────────────────────────── */
 .loading-overlay {
   display: flex;
+}
+.loading-overlay[hidden] {
+  display: none;
   flex-direction: column;
   align-items: center;
   justify-content: center;
