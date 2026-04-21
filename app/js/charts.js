@@ -38,6 +38,37 @@ function formatDate(iso) {
   return `${parseInt(d)} ${months[parseInt(m)]}`;
 }
 
+/* ── Selected-day vertical line plugin ──────────────────────────────────── */
+const selectedDayPlugin = {
+  id: 'selectedDay',
+  afterDraw(chart) {
+    const idx = chart.options.plugins.selectedDay?.index;
+    if (idx == null) return;
+    const meta = chart.getDatasetMeta(0);
+    if (!meta?.data[idx]) return;
+
+    const x = meta.data[idx].x;
+    const { ctx, chartArea: { top, bottom } } = chart;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(x, top);
+    ctx.lineTo(x, bottom);
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(0,48,130,.55)';
+    ctx.setLineDash([5, 4]);
+    ctx.stroke();
+
+    // Small label at the top of the line
+    ctx.font = "600 10px 'Source Sans Pro', sans-serif";
+    ctx.fillStyle = 'rgba(0,48,130,.8)';
+    ctx.textAlign = 'center';
+    ctx.fillText('▼ mapa', x, top - 2);
+    ctx.restore();
+  },
+};
+Chart.register(selectedDayPlugin);
+
 /* ── Init ───────────────────────────────────────────────────────────────── */
 function initChart() {
   const ctx = document.getElementById('forecast-chart').getContext('2d');
@@ -50,6 +81,7 @@ function initChart() {
       maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
       plugins: {
+        selectedDay: { index: 0 },
         legend: {
           display: true,
           position: 'top',
@@ -103,7 +135,7 @@ function initChart() {
  * @param {Object} station   Station entry from predictions.json
  * @param {string} period    'daytime' | 'nighttime'
  */
-function updateChart(station, period) {
+function updateChart(station, period, dayIndex) {
   if (!_chart) initChart();
 
   const forecastKey = period === 'daytime' ? 'daytime_forecast' : 'nighttime_forecast';
@@ -156,6 +188,9 @@ function updateChart(station, period) {
   const maxVal = Math.max(...values, 70);
   _chart.options.scales.y.min = Math.floor(minVal - 3);
   _chart.options.scales.y.max = Math.ceil(maxVal + 3);
+
+  // Sync vertical line with the selected day on the map
+  _chart.options.plugins.selectedDay.index = Math.min(dayIndex ?? 0, values.length - 1);
 
   _chart.update('active');
 }
