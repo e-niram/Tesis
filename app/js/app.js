@@ -139,7 +139,7 @@ function showStationDetail(station) {
   // Chart
   hide(DOM.chartHint);
   show(DOM.chartWrapper);
-  NoiseCharts.updateChart(station, state.period, state.dayIndex);
+  NoiseCharts.updateChart(station, state.period);
 
   // Station name heading
   DOM.stationName.textContent = station.name;
