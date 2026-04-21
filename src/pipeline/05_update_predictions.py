@@ -66,7 +66,6 @@ STATIONS = {
     1: "Paseo de Recoletos",
     2: "Carlos V",
     3: "Plaza del Carmen",
-    4: "Plaza de España",
     5: "Barrio del Pilar",
     6: "Gregorio Marañón",
     8: "Escuelas Aguirre",
@@ -100,7 +99,6 @@ COORDINATES = {
     1:  [40.422599, -3.691877],
     2:  [40.409121, -3.691509],
     3:  [40.419251, -3.703175],
-    4:  [40.424005, -3.712253],
     5:  [40.478197, -3.711543],
     6:  [40.437548, -3.690758],
     8:  [40.421575, -3.682377],
@@ -144,13 +142,17 @@ def forecast_station(series: np.ndarray, last_date: date) -> list[dict]:
         trend=None, damped_trend=False, seasonal=None, seasonal_periods=None
     )
 
+    fallback = float(np.nanmean(clean)) if len(clean) else 0.0
+
     try:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             fit = ExponentialSmoothing(clean, **kwargs).fit(optimized=True, disp=False)
         preds = fit.forecast(LEAD)
     except Exception:
-        preds = np.full(LEAD, float(np.nanmean(series)))
+        preds = np.full(LEAD, fallback)
+
+    preds = np.where(np.isnan(preds), fallback, preds)
 
     return [
         {"date": str(last_date + timedelta(days=h + 1)), "laeq": round(float(v), 2)}
@@ -221,6 +223,6 @@ if __name__ == "__main__":
 
     out_path = APP_DATA_DIR / "predictions.json"
     with open(out_path, "w", encoding="utf-8") as f:
-        json.dump(payload, f, ensure_ascii=False, indent=2)
+        json.dump(payload, f, ensure_ascii=False, indent=2, allow_nan=False)
 
     print(f"\nDone.  {len(payload['stations'])} stations → {out_path}")
