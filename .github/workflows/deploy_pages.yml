@@ -1,0 +1,48 @@
+name: Deploy to GitHub Pages
+
+on:
+  # Re-deploy whenever the daily prediction update pushes new data
+  workflow_run:
+    workflows: ["Actualización diaria de predicciones"]
+    types: [completed]
+  # Also deploy on any direct push that touches the app/ folder
+  push:
+    branches: [main]
+    paths: ['app/**']
+  # Allow manual trigger from the Actions tab
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Only one deployment runs at a time; skip queued runs but never cancel in-progress
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    # Don't deploy if the triggering daily-update workflow failed
+    if: >
+      github.event_name != 'workflow_run' ||
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Subir carpeta app/ como artefacto de Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: app/
+
+      - name: Desplegar en GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4
