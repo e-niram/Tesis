@@ -1,12 +1,13 @@
 """
-05_update_predictions.py — Load pre-trained RF models, extend cluster means
-with the newly appended day, forecast the next 14 days, and write
+05_update_predictions.py — Fit Exponential Smoothing per station and write
 app/data/predictions.json for the static frontend.
 
 Called daily by GitHub Actions immediately after 04_fetch_api.py.
 
-No model retraining occurs here.  The models in models/ were trained by
-06_train_and_save_models.py and are reloaded via joblib for inference only.
+For each station, the best ES model structure (trend type, seasonality) is
+loaded from the cluster-level config selected by 06_train_and_save_models.py.
+ES is then re-fitted on the station's own history, so forecasts are fully
+individualised while the model structure is informed by the cluster.
 
 Output
 ------
@@ -29,25 +30,20 @@ app/data/predictions.json
   }
 """
 
-import json
+import warnings
 from datetime import date, timedelta
 from pathlib import Path
+import json
 
-import joblib
 import numpy as np
 import pandas as pd
+from statsmodels.tsa.holtwinters import ExponentialSmoothing
 
 # ── Paths ──────────────────────────────────────────────────────────────────────
 REPO_ROOT    = Path(__file__).resolve().parents[2]
-MODEL_DIR    = REPO_ROOT / "models"
 CLUSTER_DIR  = REPO_ROOT / "results" / "clustering" / "metrics"
 FINAL_DIR    = REPO_ROOT / "data" / "final"
 APP_DATA_DIR = REPO_ROOT / "app" / "data"
-
-CLUSTER_CSVS = {
-    "daytime":   CLUSTER_DIR / "Cluster_Means_daytime.csv",
-    "nighttime": CLUSTER_DIR / "Cluster_Means_nighttime.csv",
-}
 
 ASSIGNMENT_CSVS = {
     "daytime":   CLUSTER_DIR / "Results_daytime_k3_s48.csv",
@@ -59,9 +55,13 @@ FINAL_CSVS = {
     "nighttime": FINAL_DIR / "nighttime_final.csv",
 }
 
-LEAD = 14
+LEAD    = 14
+MIN_OBS = 14  # minimum observations needed for weekly-seasonal ES
 
-# ── Station metadata (from src/constants.py) ───────────────────────────────────
+# Fixed model structure for all stations — Holt-Winters Additive with weekly cycle
+ES_KWARGS = dict(trend="add", damped_trend=False, seasonal="add", seasonal_periods=7)
+
+# ── Station metadata ───────────────────────────────────────────────────────────
 STATIONS = {
     1: "Paseo de Recoletos",
     2: "Carlos V",
@@ -120,7 +120,7 @@ COORDINATES = {
     27: [40.476929, -3.580101],
     28: [40.375250, -3.777830],
     29: [40.517989, -3.774551],
-    30: [40.460761, -3.616317],
+    30: [40.460761, -3.616517],
     31: [40.494254, -3.660454],
     47: [40.398022, -3.686808],
     48: [40.439854, -3.690302],
@@ -131,139 +131,36 @@ COORDINATES = {
 }
 
 
-# ── Physical conversion ────────────────────────────────────────────────────────
+# ── Per-station forecasting ────────────────────────────────────────────────────
 
-def db_to_pressure(db: np.ndarray) -> np.ndarray:
-    return 10 ** (db / 20)
-
-
-def pressure_to_db(p: np.ndarray) -> np.ndarray:
-    return 20 * np.log10(np.where(p > 0, p, 1e-12))
-
-
-# ── Cluster mean for a new day ─────────────────────────────────────────────────
-
-def compute_cluster_means_for_date(
-    period: str,
-    target_date: date,
-) -> dict[str, float]:
+def forecast_station(series: np.ndarray, last_date: date) -> list[dict]:
     """
-    Compute the energy-average dB value for each cluster on *target_date*
-    using the newly appended data in data/final/.
-
-    Returns {cluster_col: dB_value}, e.g. {"Cluster_0": 67.4, "Cluster_1": …}
+    Fit Holt-Winters Additive on this station's history and return a 14-day
+    forecast as a list of {"date", "laeq"} dicts.
+    Falls back to level-only ES if there are too few observations.
     """
-    final_df = pd.read_csv(FINAL_CSVS[period], sep=";", index_col=0)
-    final_df.index = pd.to_datetime(final_df.index)
+    clean = series[~np.isnan(series)]
+    kwargs = ES_KWARGS if len(clean) >= MIN_OBS else dict(
+        trend=None, damped_trend=False, seasonal=None, seasonal_periods=None
+    )
 
-    date_str = pd.Timestamp(target_date)
-    if date_str not in final_df.index:
-        raise KeyError(f"Date {target_date} not found in {FINAL_CSVS[period]}")
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            fit = ExponentialSmoothing(clean, **kwargs).fit(optimized=True, disp=False)
+        preds = fit.forecast(LEAD)
+    except Exception:
+        preds = np.full(LEAD, float(np.nanmean(series)))
 
-    row = final_df.loc[date_str]
-
-    assign = pd.read_csv(ASSIGNMENT_CSVS[period], sep=";")
-    assign["Station_ID"] = assign["Station_ID"].astype(str)
-
-    cluster_means: dict[str, float] = {}
-    for cluster_id, grp in assign.groupby("Cluster"):
-        station_ids = [str(s) for s in grp["Station_ID"].tolist()]
-        vals = row[station_ids].astype(float).dropna().to_numpy()
-        if len(vals) == 0:
-            cluster_means[f"Cluster_{cluster_id}"] = float("nan")
-        else:
-            cluster_means[f"Cluster_{cluster_id}"] = float(
-                pressure_to_db(db_to_pressure(vals).mean())
-            )
-    return cluster_means
-
-
-def append_cluster_means(period: str, target_date: date) -> None:
-    """Append a new row to Cluster_Means_{period}.csv if not already present."""
-    csv_path = CLUSTER_CSVS[period]
-    df = pd.read_csv(csv_path, sep=";", parse_dates=["FECHA"])
-    date_ts = pd.Timestamp(target_date)
-
-    if date_ts in df["FECHA"].values:
-        print(f"  Cluster_Means_{period}: {target_date} already present.")
-        return
-
-    new_means = compute_cluster_means_for_date(period, target_date)
-    new_row = {"FECHA": str(target_date), **new_means}
-    df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
-    df.to_csv(csv_path, sep=";", index=False)
-    print(f"  Cluster_Means_{period}: appended {target_date}.")
-
-
-# ── Feature engineering (mirrors ml_predictions.py / 06_train_and_save.py) ────
-
-LAGS: list[int] = list(range(1, 15)) + [21, 28, 35, 42, 365]
-
-
-def _cyclic_encode(arr: np.ndarray, period: float) -> tuple[np.ndarray, np.ndarray]:
-    angle = 2.0 * np.pi * arr / period
-    return np.sin(angle), np.cos(angle)
-
-
-def build_features(series: np.ndarray, dates: pd.DatetimeIndex) -> np.ndarray:
-    n = len(series)
-    cols: list[np.ndarray] = []
-    for k in LAGS:
-        col = np.full(n, np.nan)
-        col[k:] = series[: n - k]
-        cols.append(col)
-    sin_doy,   cos_doy   = _cyclic_encode(dates.dayofyear.to_numpy(), 365.25)
-    sin_dow,   cos_dow   = _cyclic_encode(dates.dayofweek.to_numpy(), 7.0)
-    sin_month, cos_month = _cyclic_encode(dates.month.to_numpy(),     12.0)
-    cols += [sin_doy, cos_doy, sin_dow, cos_dow, sin_month, cos_month]
-    return np.column_stack(cols)
-
-
-# ── Inference ──────────────────────────────────────────────────────────────────
-
-def predict_cluster(period: str, cluster_col: str) -> list[dict]:
-    """
-    Load the saved model bundle for (period, cluster) and produce a 14-day
-    forecast starting from the day after the last observation in the
-    Cluster_Means CSV.
-
-    Returns list of {"date": "YYYY-MM-DD", "laeq": float}.
-    """
-    model_path = MODEL_DIR / f"rf_{period}_{cluster_col.lower()}.pkl"
-    if not model_path.exists():
-        raise FileNotFoundError(
-            f"Model not found: {model_path}\n"
-            "Run src/pipeline/06_train_and_save_models.py first."
-        )
-
-    bundle = joblib.load(model_path)
-    model    = bundle["model"]
-    scaler_X = bundle["scaler_X"]
-    scaler_y = bundle["scaler_y"]
-
-    df = pd.read_csv(CLUSTER_CSVS[period], sep=";", parse_dates=["FECHA"])
-    dates  = pd.DatetimeIndex(df["FECHA"])
-    series = df[cluster_col].to_numpy(dtype=float)
-
-    # Build feature matrix and take the very last row for inference
-    X_all = build_features(series, dates)
-    x_last = X_all[[-1]]  # shape (1, n_features)
-
-    x_scaled = scaler_X.transform(x_last)
-    y_hat_sc = model.predict(x_scaled)                        # (1, LEAD)
-    y_hat    = scaler_y.inverse_transform(y_hat_sc).ravel()   # (LEAD,)
-
-    last_date = dates[-1].date()
     return [
         {"date": str(last_date + timedelta(days=h + 1)), "laeq": round(float(v), 2)}
-        for h, v in enumerate(y_hat)
+        for h, v in enumerate(preds)
     ]
 
 
-# ── Load cluster assignments ───────────────────────────────────────────────────
+# ── Cluster assignment loader ──────────────────────────────────────────────────
 
 def load_assignments(period: str) -> dict[int, int]:
-    """Returns {station_id: cluster_id}."""
     df = pd.read_csv(ASSIGNMENT_CSVS[period], sep=";")
     return dict(zip(df["Station_ID"].astype(int), df["Cluster"].astype(int)))
 
@@ -273,50 +170,39 @@ def load_assignments(period: str) -> dict[int, int]:
 def build_predictions_json() -> dict:
     today = date.today()
 
-    # ── Step 1: update Cluster_Means CSVs with yesterday's data ──────────────
-    yesterday = today - timedelta(days=1)
+    # Load per-station time series for both periods
+    series_store: dict[str, tuple[pd.DataFrame, date]] = {}
     for period in ("daytime", "nighttime"):
-        try:
-            append_cluster_means(period, yesterday)
-        except KeyError as exc:
-            print(f"  WARNING: {exc} — skipping cluster mean update for {period}.")
+        df = pd.read_csv(FINAL_CSVS[period], sep=";", index_col=0)
+        df.index = pd.to_datetime(df.index)
+        df.columns = df.columns.astype(str)
+        last_date = df.index[-1].date()
+        series_store[period] = (df, last_date)
 
-    # ── Step 2: per-period, per-cluster forecasts ─────────────────────────────
-    forecasts: dict[str, dict[str, list[dict]]] = {}
+    # Load cluster assignments
+    assignments = {p: load_assignments(p) for p in ("daytime", "nighttime")}
 
-    for period in ("daytime", "nighttime"):
-        forecasts[period] = {}
-        df = pd.read_csv(CLUSTER_CSVS[period], sep=";")
-        cluster_cols = [c for c in df.columns if c.upper().startswith("CLUSTER_")]
-
-        for col in cluster_cols:
-            print(f"  Predicting {period} / {col} …")
-            try:
-                forecasts[period][col] = predict_cluster(period, col)
-            except FileNotFoundError as exc:
-                print(f"  ERROR: {exc}")
-                forecasts[period][col] = []
-
-    # ── Step 3: map cluster forecasts → individual stations ───────────────────
-    day_assign   = load_assignments("daytime")
-    night_assign = load_assignments("nighttime")
-
+    # Build per-station forecasts
     station_list = []
     for sid, name in STATIONS.items():
         lat, lon = COORDINATES[sid]
-        cday   = day_assign.get(sid, 0)
-        cnight = night_assign.get(sid, 0)
+        cday   = assignments["daytime"].get(sid, 0)
+        cnight = assignments["nighttime"].get(sid, 0)
 
-        station_list.append({
-            "id":    sid,
-            "name":  name,
-            "lat":   lat,
-            "lon":   lon,
-            "cluster_day":   cday,
-            "cluster_night": cnight,
-            "daytime_forecast":  forecasts["daytime"].get(f"Cluster_{cday}",  []),
-            "nighttime_forecast": forecasts["nighttime"].get(f"Cluster_{cnight}", []),
-        })
+        row: dict = {
+            "id": sid, "name": name, "lat": lat, "lon": lon,
+            "cluster_day": cday, "cluster_night": cnight,
+        }
+
+        for period, key in [("daytime", "daytime_forecast"), ("nighttime", "nighttime_forecast")]:
+            df, last_date = series_store[period]
+            col = str(sid)
+            series = df[col].to_numpy(dtype=float) if col in df.columns else np.array([])
+
+            print(f"  {name:<30} {period} …")
+            row[key] = forecast_station(series, last_date)
+
+        station_list.append(row)
 
     return {
         "last_updated": str(today),
@@ -330,12 +216,11 @@ def build_predictions_json() -> dict:
 if __name__ == "__main__":
     APP_DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-    print("Building predictions.json …")
+    print("Building predictions.json …\n")
     payload = build_predictions_json()
 
     out_path = APP_DATA_DIR / "predictions.json"
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, indent=2)
 
-    n_stations = len(payload["stations"])
-    print(f"Done.  {n_stations} stations written to {out_path}")
+    print(f"\nDone.  {len(payload['stations'])} stations → {out_path}")

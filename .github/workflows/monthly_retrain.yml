@@ -30,17 +30,16 @@ jobs:
 
       - name: Entrenar y guardar modelos
         run: python src/pipeline/06_train_and_save_models.py
-        # Los modelos se guardan en models/*.pkl (~30–50 MB cada uno).
-        # GitHub LFS debe estar configurado si los ficheros superan los 100 MB.
+        # Saves models/es_{period}_cluster_{i}.json (~1 KB each). No LFS needed.
 
       - name: Actualizar predicciones con los modelos nuevos
         run: python src/pipeline/05_update_predictions.py
 
-      - name: Confirmar y publicar modelos + predicciones
+      - name: Confirmar y publicar predicciones actualizadas
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add models/ app/data/predictions.json
+          git add app/data/predictions.json
           git diff --cached --quiet && echo "Sin cambios." || \
-            git commit -m "chore: re-entrenamiento mensual $(date -u +%Y-%m)"
+            git commit -m "chore: validación mensual $(date -u +%Y-%m)"
           git push

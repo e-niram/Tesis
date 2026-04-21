@@ -42,9 +42,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add app/data/predictions.json \
                   data/final/daytime_final.csv \
-                  data/final/nighttime_final.csv \
-                  results/clustering/metrics/Cluster_Means_daytime.csv \
-                  results/clustering/metrics/Cluster_Means_nighttime.csv
+                  data/final/nighttime_final.csv
           git diff --cached --quiet && echo "Sin cambios nuevos." || \
             git commit -m "chore: actualización diaria $(date -u +%Y-%m-%d)"
           git push
