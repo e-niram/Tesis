@@ -186,10 +186,6 @@ function onDayChange() {
   DOM.daySlider.setAttribute('aria-valuenow', val);
   refreshMap();
   renderTable();
-  if (state.selectedStation) {
-    // Refresh chart to highlight the selected day visually (chart shows all 14, map updates)
-    NoiseCharts.updateChart(state.selectedStation, state.period);
-  }
 }
 
 /* ── Bootstrap ──────────────────────────────────────────────────────────── */

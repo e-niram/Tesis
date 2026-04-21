@@ -147,7 +147,7 @@ def forecast_station(series: np.ndarray, last_date: date) -> list[dict]:
     try:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            fit = ExponentialSmoothing(clean, **kwargs).fit(optimized=True, disp=False)
+            fit = ExponentialSmoothing(clean, **kwargs).fit(optimized=True)
         preds = fit.forecast(LEAD)
     except Exception:
         preds = np.full(LEAD, fallback)

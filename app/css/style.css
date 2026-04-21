@@ -511,7 +511,12 @@ a:focus-visible {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.87rem;
+  table-layout: fixed;
 }
+
+.noise-table th:nth-child(1) { width: 52px;  }
+.noise-table th:nth-child(3) { width: 160px; }
+.noise-table th:nth-child(4) { width: 100px; }
 
 .noise-table caption { caption-side: top; }
 
