@@ -509,6 +509,7 @@ a:focus-visible {
 
 .noise-table {
   width: 100%;
+  min-width: 480px;
   border-collapse: collapse;
   font-size: 0.87rem;
   table-layout: fixed;
