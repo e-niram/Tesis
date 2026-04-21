@@ -5,10 +5,9 @@ on:
   workflow_run:
     workflows: ["Actualización diaria de predicciones"]
     types: [completed]
-  # Also deploy on any direct push that touches the app/ folder
+  # Deploy on any push to main
   push:
     branches: [main]
-    paths: ['app/**']
   # Allow manual trigger from the Actions tab
   workflow_dispatch:
 
