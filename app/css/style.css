@@ -511,11 +511,13 @@ a:focus-visible {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.87rem;
+  table-layout: fixed;
 }
 
-/* Enough for any two-digit rank number so the column never reflows between pages */
-.noise-table th:first-child,
-.noise-table td:first-child { width: 3rem; }
+/* Pinned widths — Estación (col 2) gets the remaining ~53% automatically */
+.noise-table th:nth-child(1) { width:  5%; }
+.noise-table th:nth-child(3) { width: 28%; }
+.noise-table th:nth-child(4) { width: 14%; }
 
 .noise-table caption { caption-side: top; }
 

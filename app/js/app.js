@@ -50,7 +50,7 @@ const DOM = {
 function show(el) { el.hidden = false; }
 function hide(el) { el.hidden = true;  }
 
-const CLUSTER_LABELS = ['Ruido Bajo', 'Ruido Medio', 'Ruido Alto'];
+const CLUSTER_LABELS = ['Ruido Alto', 'Ruido Bajo', 'Ruido Medio'];
 function clusterLabel(n) {
   return CLUSTER_LABELS[n] ?? `Clúster ${n}`;
 }
