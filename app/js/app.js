@@ -47,6 +47,17 @@ const DOM = {
 function show(el) { el.hidden = false; }
 function hide(el) { el.hidden = true;  }
 
+const CLUSTER_LABELS = ['Ruido Bajo', 'Ruido Medio', 'Ruido Alto'];
+function clusterLabel(n) {
+  return CLUSTER_LABELS[n] ?? `Clúster ${n}`;
+}
+
+function applyNoiseColor(el, laeq) {
+  el.classList.remove('noise-low', 'noise-mid', 'noise-high');
+  if (laeq === null) return;
+  el.classList.add(`noise-${NoiseMap.noiseLevel(laeq).cssClass}`);
+}
+
 function forecastForStation(station) {
   const key = state.period === 'daytime' ? 'daytime_forecast' : 'nighttime_forecast';
   return station[key] || [];
@@ -111,10 +122,12 @@ function showStationDetail(station) {
   const maxDb = vals.length ? Math.max(...vals).toFixed(1) + ' dB' : '—';
   const minDb = vals.length ? Math.min(...vals).toFixed(1) + ' dB' : '—';
 
-  DOM.statClusterDay.textContent   = `Clúster ${station.cluster_day}`;
-  DOM.statClusterNight.textContent = `Clúster ${station.cluster_night}`;
+  DOM.statClusterDay.textContent   = clusterLabel(station.cluster_day);
+  DOM.statClusterNight.textContent = clusterLabel(station.cluster_night);
   DOM.statMax.textContent          = maxDb;
   DOM.statMin.textContent          = minDb;
+  applyNoiseColor(DOM.statMax, vals.length ? Math.max(...vals) : null);
+  applyNoiseColor(DOM.statMin, vals.length ? Math.min(...vals) : null);
   show(DOM.stationStats);
 }
 

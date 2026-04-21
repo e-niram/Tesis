@@ -417,6 +417,11 @@ a:focus-visible {
 
 #forecast-chart { width: 100% !important; }
 
+/* Noise-level coloring for stat values */
+.noise-low  { color: var(--color-low)  !important; }
+.noise-mid  { color: var(--color-mid)  !important; }
+.noise-high { color: var(--color-high) !important; }
+
 /* Station stats */
 .station-stats {
   display: grid;
@@ -518,6 +523,74 @@ a:focus-visible {
 :focus-visible {
   outline: 3px solid #ffd700;
   outline-offset: 2px;
+}
+
+/* ── Responsive: tablet (≤ 768px) ───────────────────────────── */
+@media (max-width: 768px) {
+  :root {
+    --header-height: auto;
+    --controls-height: auto;
+  }
+
+  .header-inner {
+    flex-wrap: wrap;
+    padding: 10px 16px;
+    gap: 8px;
+  }
+
+  .header-meta {
+    font-size: 0.75rem;
+    white-space: normal;
+  }
+
+  .controls-inner {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 10px 16px;
+    gap: 12px;
+  }
+
+  .controls-bar {
+    position: static; /* avoid covering map content when stacked */
+  }
+
+  #day-slider { width: 140px; }
+
+  .station-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .stat-item:nth-child(2) { border-right: none; }
+  .stat-item:nth-child(3) { border-top: 1px solid var(--color-border); }
+  .stat-item:nth-child(4) { border-top: 1px solid var(--color-border); }
+}
+
+/* ── Responsive: phone (≤ 480px) ────────────────────────────── */
+@media (max-width: 480px) {
+  .brand-city { display: none; }
+
+  .brand-title { font-size: 0.9rem; }
+
+  .brand-logo { width: 36px; height: 36px; }
+
+  .header-meta { width: 100%; text-align: right; }
+
+  .control-group { width: 100%; }
+
+  .radio-group { flex-wrap: wrap; }
+
+  #day-slider { width: 100%; }
+
+  #map { height: 300px; min-height: 240px; }
+
+  .chart-wrapper { min-height: 240px; }
+
+  .main-content { padding: 12px; gap: 12px; }
+
+  .panel-title { font-size: 0.9rem; padding: 10px 14px 8px; }
+
+  .noise-table th,
+  .noise-table td { padding: 7px 10px; font-size: 0.82rem; }
 }
 
 /* ── Print ───────────────────────────────────────────────────── */
