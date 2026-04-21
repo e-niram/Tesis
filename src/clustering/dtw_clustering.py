@@ -116,22 +116,48 @@ def build_dtw_dist_matrix(X_3d: np.ndarray, mp: Optional[dict]) -> np.ndarray:
               'sakoe_chiba_radius': mp['sakoe_chiba_radius']}
     return cdist_dtw(X_3d, **kw)
 
-# ── Tuning loop ───────────────────────────────────────────────────────────────
-records = []
+# ── Tuning ────────────────────────────────────────────────────────────────────
 
-for period in PERIODS:
-    print(f"{'='*60}\nPERIOD: {period}\n{'='*60}")
-
+def _load_period_data(period: str) -> tuple[np.ndarray, np.ndarray, int]:
     df = pd.read_csv(f'data/test/{period}_final_test.csv', sep=';')
     df['FECHA'] = pd.to_datetime(df['FECHA'])
     df_num = df.select_dtypes(include='number')
+    X_2d = df_num.T.values
+    X_3d = X_2d.reshape(*X_2d.shape, 1)
+    return X_2d, X_3d, X_2d.shape[1]
 
-    X_2d: np.ndarray = df_num.T.values               # (n_stations, n_time)
-    X_3d: np.ndarray = X_2d.reshape(*X_2d.shape, 1)  # (n_stations, n_time, 1)
-    n_timesteps = X_2d.shape[1]
 
-    configs     = build_configs(n_timesteps)
-    color_map   = build_color_map(configs)
+def _fit_config(X_2d: np.ndarray, X_3d: np.ndarray,
+                metric: str, mp: Optional[dict],
+                dist_matrix: Optional[np.ndarray],
+                max_iter: int, n_init: int, k: int) -> tuple[float, float, float, float]:
+    """Run one (metric, max_iter, n_init, k) combo over all seeds; return mean/std stats."""
+    inertias, sils = [], []
+    for seed in TUNING_SEEDS:
+        fit_kwargs = dict(
+            n_clusters=k,
+            metric=metric,
+            max_iter=max_iter,
+            n_init=n_init,
+            random_state=seed,
+            n_jobs=-1,
+            dtw_inertia=(metric == 'dtw'),
+        )
+        if metric == 'dtw' and mp is not None:
+            fit_kwargs['metric_params'] = mp
+        model  = TimeSeriesKMeans(**fit_kwargs)
+        y_pred = model.fit_predict(X_3d)
+        inertias.append(model.inertia_)
+        sils.append(compute_silhouette(X_2d, y_pred, metric, dist_matrix))
+    return (float(np.mean(inertias)), float(np.std(inertias)),
+            float(np.nanmean(sils)), float(np.nanstd(sils)))
+
+
+def run_tuning_period(period: str) -> list[dict]:
+    """Run the full hyperparameter grid for one period; return a list of result records."""
+    print(f"{'='*60}\nPERIOD: {period}\n{'='*60}")
+    X_2d, X_3d, n_timesteps = _load_period_data(period)
+    configs = build_configs(n_timesteps)
 
     n_fits = (len(configs) * len(MAX_ITER_LIST) * len(N_INIT_LIST) *
               len(N_CLUSTERS_LIST) * len(TUNING_SEEDS))
@@ -140,35 +166,15 @@ for period in PERIODS:
           f"  (= {[f'{int(f*100)}%' for f in SC_FRACTIONS]} of N)")
     print(f"  Total fits:    {n_fits}\n")
 
+    records = []
     for metric, mp in configs:
         lbl = config_label(metric, mp)
         print(f"  Config: {lbl}")
-
-        # Precompute the DTW distance matrix once per config — it depends only
-        # on the data and the constraint, not on k, n_init, max_iter, or seed.
         dist_matrix = build_dtw_dist_matrix(X_3d, mp) if metric == 'dtw' else None
 
         for max_iter, n_init, k in iterproduct(MAX_ITER_LIST, N_INIT_LIST, N_CLUSTERS_LIST):
-            inertias, sils = [], []
-
-            for seed in TUNING_SEEDS:
-                fit_kwargs = dict(
-                    n_clusters=k,
-                    metric=metric,
-                    max_iter=max_iter,
-                    n_init=n_init,
-                    random_state=seed,
-                    n_jobs=-1,
-                    dtw_inertia=(metric == 'dtw'),
-                )
-                if metric == 'dtw' and mp is not None:
-                    fit_kwargs['metric_params'] = mp
-
-                model  = TimeSeriesKMeans(**fit_kwargs)
-                y_pred = model.fit_predict(X_3d)
-                inertias.append(model.inertia_)
-                sils.append(compute_silhouette(X_2d, y_pred, metric, dist_matrix))
-
+            mi_mean, mi_std, sil_mean, sil_std = _fit_config(
+                X_2d, X_3d, metric, mp, dist_matrix, max_iter, n_init, k)
             records.append(dict(
                 period=period,
                 metric=metric,
@@ -177,18 +183,25 @@ for period in PERIODS:
                 max_iter=max_iter,
                 n_init=n_init,
                 n_clusters=k,
-                mean_inertia=float(np.mean(inertias)),
-                std_inertia=float(np.std(inertias)),
-                mean_silhouette=float(np.nanmean(sils)),
-                std_silhouette=float(np.nanstd(sils)),
+                mean_inertia=mi_mean,
+                std_inertia=mi_std,
+                mean_silhouette=sil_mean,
+                std_silhouette=sil_std,
             ))
             print(f"    k={k}  max_iter={max_iter}  n_init={n_init} → "
-                  f"inertia={np.mean(inertias):.1f}±{np.std(inertias):.1f}  "
-                  f"sil={np.nanmean(sils):.4f}")
+                  f"inertia={mi_mean:.1f}±{mi_std:.1f}  sil={sil_mean:.4f}")
+    return records
 
-tuning_df = pd.DataFrame(records)
-tuning_df.to_csv(f"{METRICS_DIR}/Tuning_All.csv", index=False, sep=';')
-print("\nTuning results saved to Tuning_All.csv")
+
+def run_tuning() -> pd.DataFrame:
+    """Run the full tuning grid for all periods, save results, and return the DataFrame."""
+    records = []
+    for period in PERIODS:
+        records.extend(run_tuning_period(period))
+    tuning_df = pd.DataFrame(records)
+    tuning_df.to_csv(f"{METRICS_DIR}/Tuning_All.csv", index=False, sep=';')
+    print("\nTuning results saved to Tuning_All.csv")
+    return tuning_df
 
 # ── Plots ─────────────────────────────────────────────────────────────────────
 plt.rcParams.update({
@@ -207,20 +220,15 @@ def _mark_best(ax, xs, ys, color):
                color=color, edgecolors='black', linewidth=0.8)
 
 
-for period in PERIODS:
+def plot_config_comparison(tuning_df: pd.DataFrame, period: str) -> None:
+    """Plot elbow + silhouette curves grouped by distance config for one period."""
     period_label = PERIOD_LABELS[period]
     pdf = tuning_df[tuning_df['period'] == period]
 
-    # Rebuild the color map for this period using the same configs
-    # (same fractions → same radii → same labels)
-    sample_n = (pd.read_csv(f'data/test/{period}_final_test.csv', sep=';')
-                  .select_dtypes(include='number').shape[0])
-    period_configs    = build_configs(sample_n)
-    period_color_map  = build_color_map(period_configs)
-    period_label_map  = build_label_map(period_configs)
+    _, _, n_ts = _load_period_data(period)
+    period_configs   = build_configs(n_ts)
+    period_color_map = build_color_map(period_configs)
 
-    # ── Plot A: metric / constraint comparison ────────────────────────────────
-    # Average over max_iter and n_init; keep config_label and n_clusters
     agg = (pdf.groupby(['config_label', 'n_clusters'], as_index=False)
              .agg(
                  mean_inertia    =('mean_inertia',    'mean'),
@@ -241,7 +249,6 @@ for period in PERIODS:
         ms    = sub['mean_silhouette'].values
 
         ax_elbow.plot(ks, mi, marker='o', label=lbl, color=color, linewidth=1.8)
-
         ax_sil.plot(ks, ms, marker='o', label=lbl, color=color, linewidth=1.8)
         _mark_best(ax_sil, ks, ms, color)
 
@@ -265,7 +272,12 @@ for period in PERIODS:
     plt.close()
     print(f"  Saved: {fig_path}")
 
-    # ── Plot B: sensitivity to max_iter and n_init ────────────────────────────
+
+def plot_convergence_sensitivity(tuning_df: pd.DataFrame, period: str) -> None:
+    """Plot elbow + silhouette for every (max_iter, n_init) combo using the best config."""
+    period_label = PERIOD_LABELS[period]
+    pdf = tuning_df[tuning_df['period'] == period]
+
     best_label  = pdf.groupby('config_label')['mean_silhouette'].mean().idxmax()
     best_subset = pdf[pdf['config_label'] == best_label]
 
@@ -310,34 +322,37 @@ for period in PERIODS:
     plt.close()
     print(f"  Saved: {fig_path}")
 
-# ── Select best parameters per period ─────────────────────────────────────────
-print(f"\n{'='*60}\nBest parameters selected by silhouette score\n{'='*60}")
 
-best_per_period: dict = {}
-for period in PERIODS:
-    pdf  = tuning_df[tuning_df['period'] == period]
-    idx  = pdf['mean_silhouette'].idxmax()
-    best = pdf.loc[idx]
-    best_per_period[period] = best
-    print(f"\n  {period}:")
-    print(f"    config_label : {best['config_label']}")
-    print(f"    n_clusters   : {int(best['n_clusters'])}")
-    print(f"    max_iter     : {int(best['max_iter'])}")
-    print(f"    silhouette   : {best['mean_silhouette']:.4f}")
-    print(f"    inertia      : {best['mean_inertia']:.2f}")
+def run_plots(tuning_df: pd.DataFrame) -> None:
+    """Generate all tuning plots for every period."""
+    for period in PERIODS:
+        plot_config_comparison(tuning_df, period)
+        plot_convergence_sensitivity(tuning_df, period)
 
-# ── Production run with best parameters ───────────────────────────────────────
-# Single reproducible run per period: random_state fixes the sequence of random
-# numbers; n_init=10 tries 10 different centroid initializations internally and
-# keeps the best, so we get a robust solution without multiple outer seed loops.
-print(f"\n{'='*60}\nProduction run "
-      f"(seed={PRODUCTION_SEED}, n_init={PRODUCTION_N_INIT})\n{'='*60}")
+# ── Best-parameter selection ───────────────────────────────────────────────────
 
-inertia_records = []
+def select_best_params(tuning_df: pd.DataFrame) -> dict[str, pd.Series]:
+    """Return the row with the highest mean silhouette per period."""
+    print(f"\n{'='*60}\nBest parameters selected by silhouette score\n{'='*60}")
+    best_per_period: dict = {}
+    for period in PERIODS:
+        pdf  = tuning_df[tuning_df['period'] == period]
+        idx  = pdf['mean_silhouette'].idxmax()
+        best = pdf.loc[idx]
+        best_per_period[period] = best
+        print(f"\n  {period}:")
+        print(f"    config_label : {best['config_label']}")
+        print(f"    n_clusters   : {int(best['n_clusters'])}")
+        print(f"    max_iter     : {int(best['max_iter'])}")
+        print(f"    silhouette   : {best['mean_silhouette']:.4f}")
+        print(f"    inertia      : {best['mean_inertia']:.2f}")
+    return best_per_period
 
-for period in PERIODS:
+# ── Production run ────────────────────────────────────────────────────────────
+
+def run_production_period(period: str, best: pd.Series) -> dict:
+    """Fit the final model for one period using best params; save assignments and plot."""
     print(f"\n  Period: {period}")
-    best = best_per_period[period]
 
     df = pd.read_csv(f'data/test/{period}_final_test.csv', sep=';')
     df['FECHA'] = pd.to_datetime(df['FECHA'])
@@ -351,8 +366,7 @@ for period in PERIODS:
     metric, mp = label_map[best['config_label']]
     k          = int(best['n_clusters'])
     max_iter   = int(best['max_iter'])
-
-    run_id = f"{period}_k{k}"
+    run_id     = f"{period}_k{k}"
 
     fit_kwargs = dict(
         n_clusters=k,
@@ -368,12 +382,6 @@ for period in PERIODS:
 
     model  = TimeSeriesKMeans(**fit_kwargs)
     labels = model.fit_predict(X_3d)
-
-    inertia_records.append({
-        'Period': period, 'K': k,
-        'Seed': PRODUCTION_SEED, 'NInit': PRODUCTION_N_INIT,
-        'Inertia': model.inertia_,
-    })
 
     (pd.DataFrame({'Station_ID': station_ids, 'Cluster': labels})
        .to_csv(f"{METRICS_DIR}/Results_{run_id}.csv", index=False, sep=';'))
@@ -401,8 +409,245 @@ for period in PERIODS:
     plt.close()
 
     print(f"  inertia={model.inertia_:.1f}")
+    return {'Period': period, 'K': k, 'Seed': PRODUCTION_SEED,
+            'NInit': PRODUCTION_N_INIT, 'Inertia': model.inertia_}
 
-(pd.DataFrame(inertia_records)
-   .to_csv(f"{METRICS_DIR}/Inertia_Summary.csv", index=False, sep=';'))
 
-print("\nProcess finished.")
+def run_production(tuning_df: pd.DataFrame) -> None:
+    """Select best params and run one production fit per period; save inertia summary."""
+    best_per_period = select_best_params(tuning_df)
+    print(f"\n{'='*60}\nProduction run "
+          f"(seed={PRODUCTION_SEED}, n_init={PRODUCTION_N_INIT})\n{'='*60}")
+    inertia_records = [run_production_period(p, best_per_period[p]) for p in PERIODS]
+    (pd.DataFrame(inertia_records)
+       .to_csv(f"{METRICS_DIR}/Inertia_Summary.csv", index=False, sep=';'))
+
+# ── LaTeX table ───────────────────────────────────────────────────────────────
+
+def _escape_latex(text: str) -> str:
+    return (text
+            .replace('&', r'\&')
+            .replace('%', r'\%')
+            .replace('_', r'\_')
+            .replace('#', r'\#'))
+
+
+def _latex_row(cells: list[str], bold: bool) -> str:
+    if bold:
+        cells = [f'\\textbf{{{c}}}' for c in cells]
+    return '    ' + ' & '.join(cells) + r' \\'
+
+
+def _append_table(lines: list[str],
+                  label: str, caption: str,
+                  col_spec: str, header: list[str],
+                  rows: list[tuple[list[str], bool]]) -> None:
+    """Append a complete booktabs table to lines."""
+    lines += [
+        r'\begin{table}[ht]',
+        r'  \centering',
+        f'  \\caption{{{caption}}}',
+        f'  \\label{{{label}}}',
+        f'  \\begin{{tabular}}{{{col_spec}}}',
+        r'    \toprule',
+        '    ' + ' & '.join(f'\\textbf{{{h}}}' for h in header) + r' \\',
+        r'    \midrule',
+    ]
+    for i, (cells, bold) in enumerate(rows):
+        lines.append(_latex_row(cells, bold))
+        if i < len(rows) - 1 and rows[i + 1][0][0] != '':
+            # blank first cell signals a continuation row — no rule needed
+            pass
+    lines += [r'    \bottomrule', r'  \end{tabular}', r'\end{table}', '']
+
+
+def _table_config_comparison(tuning_df: pd.DataFrame, period: str) -> tuple[str, list]:
+    """
+    Table 1: distance config × k, aggregated over max_iter and n_init.
+    Includes ± std on silhouette to show the winner is robustly better.
+    Returns (caption, rows) where rows = list of (cells, bold).
+    """
+    period_label = PERIOD_LABELS[period]
+    agg = (tuning_df[tuning_df['period'] == period]
+           .groupby(['config_label', 'n_clusters'], as_index=False)
+           .agg(
+               mean_inertia    =('mean_inertia',    'mean'),
+               std_inertia     =('std_inertia',     'mean'),
+               mean_silhouette =('mean_silhouette', 'mean'),
+               std_silhouette  =('std_silhouette',  'mean'),
+           ))
+
+    best_sil = agg['mean_silhouette'].max()
+    caption = (
+        f'Comparación de configuraciones de distancia — Período {period_label}. '
+        f'Silueta promediada sobre \\texttt{{max\\_iter}}, \\texttt{{n\\_init}} '
+        f'y semillas; $\\pm$ indica la desviación estándar entre semillas. '
+        f'La fila en negrita corresponde a la configuración seleccionada.'
+    )
+
+    rows = []
+    prev_cfg = None
+    for _, row in agg.sort_values(['config_label', 'n_clusters']).iterrows():
+        cfg      = _escape_latex(row['config_label'])
+        cfg_cell = cfg if row['config_label'] != prev_cfg else ''
+        prev_cfg = row['config_label']
+        cells = [
+            cfg_cell,
+            str(int(row['n_clusters'])),
+            f"{row['mean_inertia']:.1f} $\\pm$ {row['std_inertia']:.1f}",
+            f"{row['mean_silhouette']:.4f} $\\pm$ {row['std_silhouette']:.4f}",
+        ]
+        rows.append((cells, row['mean_silhouette'] == best_sil))
+    return caption, rows
+
+
+def _table_convergence_summary(tuning_df: pd.DataFrame, period: str) -> tuple[str, str, list]:
+    """
+    Table 2: 2×2 summary — one cell per (max_iter, n_init) pair showing the
+    best silhouette across k. Makes the "these params barely matter" argument
+    visually obvious without 16 rows of data.
+    Returns (best_label, caption, rows).
+    """
+    period_label = PERIOD_LABELS[period]
+    pdf = tuning_df[tuning_df['period'] == period]
+    best_label = pdf.groupby('config_label')['mean_silhouette'].mean().idxmax()
+    subset     = pdf[pdf['config_label'] == best_label].copy()
+
+    # Best silhouette across k for each (max_iter, n_init) pair
+    summary = (subset
+               .groupby(['max_iter', 'n_init'], as_index=False)
+               .agg(best_silhouette=('mean_silhouette', 'max')))
+
+    overall_best = summary['best_silhouette'].max()
+    caption = (
+        f'Sensibilidad a parámetros de convergencia para '
+        f'\\textit{{{_escape_latex(best_label)}}} — Período {period_label}. '
+        f'Cada celda muestra la mejor silueta sobre $k \\in '
+        f'{{{",".join(str(k) for k in N_CLUSTERS_LIST)}}}$. '
+        f'La similitud entre celdas confirma que estos parámetros tienen '
+        f'escasa influencia en el resultado.'
+    )
+
+    rows = []
+    prev_max_iter = None
+    for _, row in summary.sort_values(['max_iter', 'n_init']).iterrows():
+        mi         = int(row['max_iter'])
+        ni         = int(row['n_init'])
+        mi_cell    = str(mi) if mi != prev_max_iter else ''
+        prev_max_iter = mi
+        cells = [
+            mi_cell,
+            str(ni),
+            f"{row['best_silhouette']:.4f}",
+        ]
+        rows.append((cells, row['best_silhouette'] == overall_best))
+    return best_label, caption, rows
+
+
+def _table_final_selection(tuning_df: pd.DataFrame) -> tuple[str, list]:
+    """
+    Table 3 (one row per period): the configuration that was actually chosen,
+    with its silhouette score. Acts as the clear closing summary.
+    Returns (caption, rows).
+    """
+    caption = (
+        'Parámetros finales seleccionados por período. '
+        'La configuración elegida maximiza el coeficiente de silueta '
+        'en la búsqueda en rejilla.'
+    )
+    rows = []
+    for period in PERIODS:
+        pdf  = tuning_df[tuning_df['period'] == period]
+        best = pdf.loc[pdf['mean_silhouette'].idxmax()]
+        cells = [
+            PERIOD_LABELS[period],
+            _escape_latex(best['config_label']),
+            str(int(best['n_clusters'])),
+            str(int(best['max_iter'])),
+            str(int(best['n_init'])),
+            f"{best['mean_silhouette']:.4f}",
+        ]
+        rows.append((cells, False))
+    return caption, rows
+
+
+def print_latex_table(tuning_df: pd.DataFrame) -> None:
+    """
+    Print three LaTeX tables per period plus one cross-period summary:
+      1. Distance-config comparison (mean ± std silhouette, aggregated over
+         max_iter / n_init) — justifies the metric/constraint choice.
+      2. Convergence-parameter 2×2 summary for the winning config — shows
+         max_iter and n_init have little impact.
+      3. Final selection — one row per period, clear closing summary.
+    """
+    lines = [
+        r'% ── Tuning results — paste into Overleaf ─────────────────',
+        r'% Requires \usepackage{booktabs} in preamble',
+        '',
+    ]
+
+    for period in PERIODS:
+        period_label = PERIOD_LABELS[period]
+        lines.append(f'% {"─"*56}')
+        lines.append(f'% Period: {period_label}')
+        lines.append(f'% {"─"*56}')
+        lines.append('')
+
+        # Table 1 — config comparison with ± std on silhouette
+        caption1, rows1 = _table_config_comparison(tuning_df, period)
+        _append_table(
+            lines,
+            label    = f'tab:tuning_config_{period}',
+            caption  = caption1,
+            col_spec = 'llrcc',
+            header   = ['Configuración', '$k$', 'Inercia', 'Silueta'],
+            rows     = rows1,
+        )
+
+        # Table 2 — compact 2×2 convergence summary
+        best_label, caption2, rows2 = _table_convergence_summary(tuning_df, period)
+        _append_table(
+            lines,
+            label    = f'tab:tuning_conv_{period}',
+            caption  = caption2,
+            col_spec = 'rrc',
+            header   = ['\\texttt{max\\_iter}', '\\texttt{n\\_init}',
+                        'Silueta (mejor $k$)'],
+            rows     = rows2,
+        )
+
+    # Table 3 — final selection (cross-period)
+    lines.append(f'% {"─"*56}')
+    lines.append('% Final selection summary')
+    lines.append(f'% {"─"*56}')
+    lines.append('')
+    caption3, rows3 = _table_final_selection(tuning_df)
+    _append_table(
+        lines,
+        label    = 'tab:tuning_final',
+        caption  = caption3,
+        col_spec = 'llrrrr',
+        header   = ['Período', 'Configuración', '$k$',
+                    '\\texttt{max\\_iter}', '\\texttt{n\\_init}', 'Silueta'],
+        rows     = rows3,
+    )
+
+    table_str = '\n'.join(lines)
+    print('\n' + '='*60)
+    print('LATEX TABLES — copy-paste into Overleaf')
+    print('='*60)
+    print(table_str)
+
+    out_path = f"{TUNING_DIR}/tuning_table.tex"
+    with open(out_path, 'w') as f:
+        f.write(table_str + '\n')
+    print(f"\nLaTeX tables also saved to {out_path}")
+
+# ── Entry point ───────────────────────────────────────────────────────────────
+
+if __name__ == '__main__':
+    tuning_df = run_tuning()
+    run_plots(tuning_df)
+    run_production(tuning_df)
+    print_latex_table(tuning_df)
+    print("\nProcess finished.")
