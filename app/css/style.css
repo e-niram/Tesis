@@ -511,12 +511,11 @@ a:focus-visible {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.87rem;
-  table-layout: fixed;
 }
 
-.noise-table th:nth-child(1) { width: 52px;  }
-.noise-table th:nth-child(3) { width: 160px; }
-.noise-table th:nth-child(4) { width: 100px; }
+/* Enough for any two-digit rank number so the column never reflows between pages */
+.noise-table th:first-child,
+.noise-table td:first-child { width: 3rem; }
 
 .noise-table caption { caption-side: top; }
 
