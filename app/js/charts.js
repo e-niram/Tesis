@@ -12,9 +12,15 @@ let _chart = null;
 
 /* ── Colour palette matching style.css ─────────────────────────────────── */
 const PALETTE = {
-  daytime:  { line: '#003082', fill: 'rgba(0,48,130,.12)'  },
-  nighttime:{ line: '#c8102e', fill: 'rgba(200,16,46,.10)' },
+  daytime:  { line: '#003082' },
+  nighttime:{ line: '#c8102e' },
 };
+
+function noiseColor(v) {
+  if (v < 55) return '#2e7d32';
+  if (v < 65) return '#e65100';
+  return '#c62828';
+}
 
 /* ── WHO threshold annotation bands ────────────────────────────────────── */
 // Rendered as horizontal reference lines via Chart.js annotation plugin.
@@ -121,20 +127,26 @@ function updateChart(station, period) {
     order: 10,   // draw behind the main line
   }));
 
+  const pointColors = values.map(noiseColor);
+
   _chart.data.labels = labels;
   _chart.data.datasets = [
     {
       label: `Predicción (${periodLabel})`,
       data: values,
-      borderColor: pal.line,
-      backgroundColor: pal.fill,
+      borderColor: pal.line,       // legend swatch colour
+      backgroundColor: 'rgba(0,0,0,.04)',
       borderWidth: 2.5,
       pointRadius: 4,
       pointHoverRadius: 6,
-      pointBackgroundColor: pal.line,
+      pointBackgroundColor: pointColors,
+      pointBorderColor: pointColors,
       fill: true,
       tension: 0.3,
       order: 1,
+      segment: {
+        borderColor: ctx => noiseColor(values[ctx.p0DataIndex]),
+      },
     },
     ...whoDatasets,
   ];

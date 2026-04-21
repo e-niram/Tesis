@@ -40,6 +40,9 @@ const DOM = {
   statMax:          $('stat-max'),
   statMin:          $('stat-min'),
   rankingBody:      $('ranking-body'),
+  pagePrev:         $('page-prev'),
+  pageNext:         $('page-next'),
+  pageInfo:         $('page-info'),
   periodRadios:     document.querySelectorAll('input[name="period"]'),
 };
 
@@ -82,26 +85,51 @@ function formatDateLong(iso) {
 }
 
 /* ── Ranking table ──────────────────────────────────────────────────────── */
+const tbl = { rows: [], page: 0, perPage: 10, sortCol: 'laeq', sortDir: -1 };
+
 function renderTable() {
-  const { stations } = state.data;
-
-  const sorted = stations
+  tbl.rows = state.data.stations
     .map(s => ({ ...s, laeq: laeqAtDay(s) }))
-    .filter(s => s.laeq !== null)
-    .sort((a, b) => b.laeq - a.laeq)
-    .slice(0, 10);
+    .filter(s => s.laeq !== null);
+  tbl.page = 0;
+  _sortRows();
+  _renderPage();
+  show(DOM.tableSection);
+}
 
-  DOM.rankingBody.innerHTML = sorted.map((s, i) => {
+function _sortRows() {
+  const { sortCol, sortDir } = tbl;
+  tbl.rows.sort((a, b) => {
+    const av = sortCol === 'name' ? a.name.toLowerCase() : a.laeq;
+    const bv = sortCol === 'name' ? b.name.toLowerCase() : b.laeq;
+    return sortDir * (av > bv ? 1 : av < bv ? -1 : 0);
+  });
+}
+
+function _renderPage() {
+  const start = tbl.page * tbl.perPage;
+  const total = Math.ceil(tbl.rows.length / tbl.perPage);
+
+  DOM.rankingBody.innerHTML = tbl.rows.slice(start, start + tbl.perPage).map((s, i) => {
     const { label, cssClass } = NoiseMap.noiseLevel(s.laeq);
     return `<tr>
-      <td>${i + 1}</td>
+      <td>${start + i + 1}</td>
       <td>${_esc(s.name)}</td>
       <td>${s.laeq.toFixed(1)} dB</td>
       <td><span class="badge badge-${cssClass}">${_esc(label)}</span></td>
     </tr>`;
   }).join('');
 
-  show(DOM.tableSection);
+  DOM.pageInfo.textContent = `${tbl.page + 1} / ${total}`;
+  DOM.pagePrev.disabled    = tbl.page === 0;
+  DOM.pageNext.disabled    = tbl.page >= total - 1;
+
+  document.querySelectorAll('.noise-table th[data-sort]').forEach(th => {
+    th.classList.remove('sort-asc', 'sort-desc');
+    if (th.dataset.sort === tbl.sortCol) {
+      th.classList.add(tbl.sortDir === 1 ? 'sort-asc' : 'sort-desc');
+    }
+  });
 }
 
 /* ── Station detail (chart + stats) ────────────────────────────────────── */
@@ -192,6 +220,25 @@ async function bootstrap() {
   // Wire controls
   DOM.periodRadios.forEach(r => r.addEventListener('change', onPeriodChange));
   DOM.daySlider.addEventListener('input', onDayChange);
+
+  // Table sorting
+  document.querySelectorAll('.noise-table th[data-sort]').forEach(th => {
+    th.addEventListener('click', () => {
+      if (tbl.sortCol === th.dataset.sort) {
+        tbl.sortDir *= -1;
+      } else {
+        tbl.sortCol = th.dataset.sort;
+        tbl.sortDir = th.dataset.sort === 'name' ? 1 : -1;
+      }
+      tbl.page = 0;
+      _sortRows();
+      _renderPage();
+    });
+  });
+
+  // Table pagination
+  DOM.pagePrev.addEventListener('click', () => { tbl.page--; _renderPage(); });
+  DOM.pageNext.addEventListener('click', () => { tbl.page++; _renderPage(); });
 
   // First render
   hide(DOM.loading);

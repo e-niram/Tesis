@@ -160,21 +160,26 @@
 
     <!-- ── TABLA RESUMEN ────────────────────────────────────────── -->
     <section class="panel panel-table" aria-labelledby="table-heading" id="table-section" hidden>
-      <h2 id="table-heading" class="panel-title">Top 10 — Estaciones con Mayor Ruido Predicho</h2>
-      <div class="table-scroll" role="region" aria-label="Tabla desplazable de estaciones con mayor ruido predicho" tabindex="0">
+      <h2 id="table-heading" class="panel-title">Estaciones — Predicción de Ruido</h2>
+      <div class="table-scroll" role="region" aria-label="Tabla de estaciones con ruido predicho" tabindex="0">
         <table class="noise-table" id="ranking-table">
-          <caption class="sr-only">Ranking de estaciones por nivel de ruido LAeq predicho el día seleccionado</caption>
+          <caption class="sr-only">Estaciones ordenadas por nivel de ruido LAeq predicho el día seleccionado</caption>
           <thead>
             <tr>
               <th scope="col">#</th>
-              <th scope="col">Estación</th>
-              <th scope="col">LAeq predicho (dB)</th>
+              <th scope="col" class="sortable" data-sort="name">Estación <span class="sort-icon" aria-hidden="true"></span></th>
+              <th scope="col" class="sortable" data-sort="laeq">LAeq predicho (dB) <span class="sort-icon" aria-hidden="true"></span></th>
               <th scope="col">Nivel</th>
             </tr>
           </thead>
           <tbody id="ranking-body">
           </tbody>
         </table>
+      </div>
+      <div class="pagination" id="table-pagination">
+        <button id="page-prev" class="page-btn" disabled aria-label="Página anterior">&#8249;</button>
+        <span id="page-info" class="page-info"></span>
+        <button id="page-next" class="page-btn" aria-label="Página siguiente">&#8250;</button>
       </div>
     </section>
 

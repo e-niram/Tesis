@@ -146,15 +146,18 @@ function updateMapMarkers(stations, period, dayIndex) {
 }
 
 function _buildPopup(station, laeq, date, label, period) {
-  const periodLabel = period === 'daytime' ? 'Diurno' : 'Nocturno';
+  const periodLabel = period === 'daytime' ? 'Diurno (07–23 h)' : 'Nocturno (23–07 h)';
+  const { color }   = noiseLevel(laeq);
   return `
     <div class="popup-title">${_escapeHtml(station.name)}</div>
-    <div><strong>LAeq:</strong> ${laeq.toFixed(1)} dB &mdash; <em>${_escapeHtml(label)}</em></div>
-    <div><strong>Fecha:</strong> ${_escapeHtml(date)}</div>
-    <div><strong>Período:</strong> ${periodLabel}</div>
-    <div style="margin-top:6px; font-size:.78rem; color:#555;">
-      Haga clic para ver la predicción completa de 14 días.
-    </div>`;
+    <div class="popup-laeq-row">
+      <span class="popup-db">${laeq.toFixed(1)} dB</span>
+      <span class="popup-level-badge" style="background:${color}">${_escapeHtml(label)}</span>
+    </div>
+    <dl class="popup-meta">
+      <dt>Fecha</dt><dd>${_escapeHtml(date)}</dd>
+      <dt>Período</dt><dd>${periodLabel}</dd>
+    </dl>`;
 }
 
 function _escapeHtml(str) {
