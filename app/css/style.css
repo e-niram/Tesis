@@ -17,7 +17,7 @@
 	--color-border: #d0d5dd;
 
 	--color-low: #2e7d32; /* < 55 dB */
-	--color-mid: #d97706; /* 55–65 dB */
+	--color-mid: #ca8a04; /* 55–65 dB */
 	--color-high: #c62828; /* ≥ 65 dB  */
 
 	--radius: 6px;
@@ -164,25 +164,40 @@ a:focus-visible {
 	white-space: nowrap;
 }
 
-.lang-toggle {
-	background: rgba(255, 255, 255, 0.15);
-	border: 1.5px solid rgba(255, 255, 255, 0.5);
-	color: #fff;
-	font-family: var(--font-sans);
-	font-size: 0.78rem;
-	font-weight: 700;
-	padding: 5px 12px;
+.lang-switcher {
+	display: flex;
+	border: 1.5px solid rgba(255, 255, 255, 0.45);
 	border-radius: var(--radius);
-	cursor: pointer;
-	letter-spacing: 0.08em;
-	transition: background 0.15s, border-color 0.15s;
-	white-space: nowrap;
+	overflow: hidden;
 	flex-shrink: 0;
 }
 
-.lang-toggle:hover {
-	background: rgba(255, 255, 255, 0.28);
-	border-color: rgba(255, 255, 255, 0.85);
+.lang-opt {
+	background: transparent;
+	border: none;
+	color: rgba(255, 255, 255, 0.6);
+	font-family: var(--font-sans);
+	font-size: 0.78rem;
+	font-weight: 700;
+	padding: 5px 11px;
+	cursor: pointer;
+	letter-spacing: 0.07em;
+	transition: background 0.15s, color 0.15s;
+}
+
+.lang-opt + .lang-opt {
+	border-left: 1.5px solid rgba(255, 255, 255, 0.45);
+}
+
+.lang-opt[aria-pressed="true"] {
+	background: rgba(255, 255, 255, 0.22);
+	color: #fff;
+	cursor: default;
+}
+
+.lang-opt:hover:not([aria-pressed="true"]) {
+	background: rgba(255, 255, 255, 0.12);
+	color: rgba(255, 255, 255, 0.9);
 }
 
 .meta-value {
@@ -843,7 +858,7 @@ th.sort-desc .sort-icon::after {
 	.controls-bar,
 	.site-footer,
 	.skip-link,
-	.lang-toggle {
+	.lang-switcher {
 		display: none;
 	}
 	.panel {

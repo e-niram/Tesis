@@ -18,7 +18,7 @@ const PALETTE = {
 
 function noiseColor(v) {
   if (v < 55) return '#2e7d32';
-  if (v < 65) return '#d97706';
+  if (v < 65) return '#ca8a04';
   return '#c62828';
 }
 

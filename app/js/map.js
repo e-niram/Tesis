@@ -16,7 +16,7 @@
  */
 function noiseLevel(laeq) {
   if (laeq < 55) return { color: '#2e7d32', label: I18n.t('noise.low'),  cssClass: 'low'  };
-  if (laeq < 65) return { color: '#d97706', label: I18n.t('noise.mid'),  cssClass: 'mid'  };
+  if (laeq < 65) return { color: '#ca8a04', label: I18n.t('noise.mid'),  cssClass: 'mid'  };
   return              { color: '#c62828', label: I18n.t('noise.high'), cssClass: 'high' };
 }
 

@@ -37,7 +37,10 @@
         </div>
       </div>
       <div class="header-actions">
-        <button id="lang-toggle" class="lang-toggle" aria-label="Switch language to English" lang="en">EN</button>
+        <div class="lang-switcher" role="group" aria-label="Idioma / Language">
+          <button class="lang-opt" data-lang="es" aria-pressed="true">ES</button>
+          <button class="lang-opt" data-lang="en" aria-pressed="false">EN</button>
+        </div>
         <div class="header-meta" aria-live="polite" aria-atomic="true">
           <span id="last-updated-label" data-i18n="header.updated.label">Última actualización:</span>
           <span id="last-updated" class="meta-value">—</span>

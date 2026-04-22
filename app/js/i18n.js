@@ -61,8 +61,6 @@ const TRANSLATIONS = {
     'footer.data':                'Datos de ruido: <a href="https://datos.madrid.es" target="_blank" rel="noopener noreferrer">Portal de Datos Abiertos del Ayuntamiento de Madrid</a>. Predicciones generadas mediante modelos de aprendizaje automático y suavizados clásicos.',
     'footer.auto':                'Actualización automática diaria',
     'footer.updated':             'Actualizado:',
-    'lang.toggle.label':          'EN',
-    'lang.btn.aria':              'Switch language to English',
     'date.locale':                'es-ES',
     'months':                     ['','ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'],
   },
@@ -125,8 +123,6 @@ const TRANSLATIONS = {
     'footer.data':                'Noise data: <a href="https://datos.madrid.es" target="_blank" rel="noopener noreferrer">Madrid Open Data Portal</a>. Forecasts generated using machine learning models and classical smoothing methods.',
     'footer.auto':                'Automatic daily update',
     'footer.updated':             'Updated:',
-    'lang.toggle.label':          'ES',
-    'lang.btn.aria':              'Cambiar idioma a español',
     'date.locale':                'en-GB',
     'months':                     ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
   },
@@ -169,22 +165,18 @@ function applyAll() {
     el.setAttribute('aria-label', t(el.dataset.i18nAria));
   });
 
-  const btn = document.getElementById('lang-toggle');
-  if (btn) {
-    btn.textContent = t('lang.toggle.label');
-    btn.setAttribute('aria-label', t('lang.btn.aria'));
-    btn.setAttribute('lang', _lang === 'es' ? 'en' : 'es');
-  }
+  document.querySelectorAll('.lang-opt[data-lang]').forEach(btn => {
+    btn.setAttribute('aria-pressed', String(btn.dataset.lang === _lang));
+  });
 }
 
 /* ── Init ─────────────────────────────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', () => {
   applyAll();
 
-  const btn = document.getElementById('lang-toggle');
-  if (btn) {
-    btn.addEventListener('click', () => setLang(_lang === 'es' ? 'en' : 'es'));
-  }
+  document.querySelectorAll('.lang-opt[data-lang]').forEach(btn => {
+    btn.addEventListener('click', () => setLang(btn.dataset.lang));
+  });
 });
 
 window.I18n = { t, getLang, setLang, applyAll };
