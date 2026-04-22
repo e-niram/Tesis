@@ -31,3 +31,9 @@ nighttime;dtw;None;DTW (sin restricción);50;5;3;7897.805853835718;69.7359384968
 nighttime;dtw;None;DTW (sin restricción);50;5;4;6680.1514134037525;89.98717685128584;0.23569302844302276;0.002559497901172643
 nighttime;dtw;None;DTW (sin restricción);50;5;5;6024.436743919304;60.21203479652258;0.21810285750772304;0.01759125784093737
 nighttime;euclidean;None;Euclidiana;20;3;2;45536.345150982146;0.0;0.4948695210206531;5.551115123125783e-17
+nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 201};DTW Sakoe-Chiba r=201;20;3;2;10983.590777733807;227.68191314018077;0.544335061588754;0.00801241126259845
+nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 201};DTW Sakoe-Chiba r=201;20;3;3;8703.881616244293;88.74700157045376;0.421104262620158;0.0007307409535742168
+nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 201};DTW Sakoe-Chiba r=201;20;3;4;7035.745224719474;246.03005996411395;0.3194508736283577;0.020120368099401265
+nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 201};DTW Sakoe-Chiba r=201;20;3;5;6028.38009401892;151.9850829254368;0.33211608166352635;0.010567466972837267
+nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 201};DTW Sakoe-Chiba r=201;20;5;2;10922.426691647981;203.47424747500105;0.5500006919261928;0.0
+nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 201};DTW Sakoe-Chiba r=201;20;5;3;8530.797180223535;36.34386954440806;0.41973427988609774;0.002304138298923933
