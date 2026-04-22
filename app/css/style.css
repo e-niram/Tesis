@@ -809,6 +809,10 @@ th.sort-desc .sort-icon::after {
 	color: rgba(255, 255, 255, 0.9);
 }
 
+.footer-updated-line {
+	opacity: 0.6;
+}
+
 /* ── Focus styles (WCAG 2.4.7) ───────────────────────────────── */
 :focus-visible {
 	outline: 3px solid #ffd700;

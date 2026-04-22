@@ -204,7 +204,7 @@ async function bootstrap() {
   // Update timestamps
   const updated = state.data.last_updated || '';
   DOM.lastUpdated.textContent   = updated ? formatDateLong(updated) : '—';
-  DOM.footerUpdated.textContent = updated ? `${I18n.t('footer.updated')} ${updated}` : '';
+  if (DOM.footerUpdated) DOM.footerUpdated.textContent = updated ? `${I18n.t('footer.updated')} ${updated}` : '';
 
   // Init map
   const map = NoiseMap.initMap(station => showStationDetail(station));
@@ -258,7 +258,7 @@ async function bootstrap() {
     if (!state.data) return;
     const updated = state.data.last_updated || '';
     DOM.lastUpdated.textContent   = updated ? formatDateLong(updated) : '—';
-    DOM.footerUpdated.textContent = updated ? `${I18n.t('footer.updated')} ${updated}` : '';
+    if (DOM.footerUpdated) DOM.footerUpdated.textContent = updated ? `${I18n.t('footer.updated')} ${updated}` : '';
     refreshMap();
     renderTable();
     if (state.selectedStation) {
