@@ -50,9 +50,9 @@ const DOM = {
 function show(el) { el.hidden = false; }
 function hide(el) { el.hidden = true;  }
 
-const CLUSTER_LABELS = ['Ruido Alto', 'Ruido Bajo', 'Ruido Medio'];
 function clusterLabel(n) {
-  return CLUSTER_LABELS[n] ?? `Clúster ${n}`;
+  const labels = [I18n.t('cluster.high'), I18n.t('cluster.low'), I18n.t('cluster.mid')];
+  return labels[n] ?? `${I18n.t('cluster.n')} ${n}`;
 }
 
 function applyNoiseColor(el, laeq) {
@@ -81,7 +81,7 @@ function dateAtDay(station) {
 function formatDateLong(iso) {
   if (!iso || iso === '—') return '—';
   const d = new Date(iso + 'T00:00:00');
-  return d.toLocaleDateString('es-ES', { weekday:'short', day:'numeric', month:'long' });
+  return d.toLocaleDateString(I18n.t('date.locale'), { weekday:'short', day:'numeric', month:'long' });
 }
 
 /* ── Ranking table ──────────────────────────────────────────────────────── */
@@ -204,7 +204,7 @@ async function bootstrap() {
   // Update timestamps
   const updated = state.data.last_updated || '';
   DOM.lastUpdated.textContent   = updated ? formatDateLong(updated) : '—';
-  DOM.footerUpdated.textContent = updated ? `Actualizado: ${updated}` : '';
+  DOM.footerUpdated.textContent = updated ? `${I18n.t('footer.updated')} ${updated}` : '';
 
   // Init map
   const map = NoiseMap.initMap(station => showStationDetail(station));
@@ -235,6 +235,24 @@ async function bootstrap() {
   // Table pagination
   DOM.pagePrev.addEventListener('click', () => { tbl.page--; _renderPage(); });
   DOM.pageNext.addEventListener('click', () => { tbl.page++; _renderPage(); });
+
+  // Set translated station placeholder
+  DOM.stationName.textContent = I18n.t('chart.station.placeholder');
+
+  // Re-render dynamic content on language change
+  document.addEventListener('langchange', () => {
+    if (!state.data) return;
+    const updated = state.data.last_updated || '';
+    DOM.lastUpdated.textContent   = updated ? formatDateLong(updated) : '—';
+    DOM.footerUpdated.textContent = updated ? `${I18n.t('footer.updated')} ${updated}` : '';
+    refreshMap();
+    renderTable();
+    if (state.selectedStation) {
+      showStationDetail(state.selectedStation);
+    } else {
+      DOM.stationName.textContent = I18n.t('chart.station.placeholder');
+    }
+  });
 
   // First render
   hide(DOM.loading);

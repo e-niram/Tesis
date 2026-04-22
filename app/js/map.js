@@ -15,9 +15,9 @@
  * Returns a CSS colour string and a badge label.
  */
 function noiseLevel(laeq) {
-  if (laeq < 55) return { color: '#2e7d32', label: 'Bajo',      cssClass: 'low'  };
-  if (laeq < 65) return { color: '#e65100', label: 'Moderado',  cssClass: 'mid'  };
-  return              { color: '#c62828', label: 'Alto',      cssClass: 'high' };
+  if (laeq < 55) return { color: '#2e7d32', label: I18n.t('noise.low'),  cssClass: 'low'  };
+  if (laeq < 65) return { color: '#e65100', label: I18n.t('noise.mid'),  cssClass: 'mid'  };
+  return              { color: '#c62828', label: I18n.t('noise.high'), cssClass: 'high' };
 }
 
 /**
@@ -146,7 +146,7 @@ function updateMapMarkers(stations, period, dayIndex) {
 }
 
 function _buildPopup(station, laeq, date, label, period) {
-  const periodLabel = period === 'daytime' ? 'Diurno (07–23 h)' : 'Nocturno (23–07 h)';
+  const periodLabel = period === 'daytime' ? I18n.t('popup.daytime') : I18n.t('popup.nighttime');
   const { color }   = noiseLevel(laeq);
   return `
     <div class="popup-title">${_escapeHtml(station.name)}</div>
@@ -155,8 +155,8 @@ function _buildPopup(station, laeq, date, label, period) {
       <span class="popup-level-badge" style="background:${color}">${_escapeHtml(label)}</span>
     </div>
     <dl class="popup-meta">
-      <dt>Fecha</dt><dd>${_escapeHtml(date)}</dd>
-      <dt>Período</dt><dd>${periodLabel}</dd>
+      <dt>${I18n.t('popup.date')}</dt><dd>${_escapeHtml(date)}</dd>
+      <dt>${I18n.t('popup.period')}</dt><dd>${periodLabel}</dd>
     </dl>`;
 }
 

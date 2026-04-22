@@ -10,8 +10,6 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 
-  <!-- Chart.js & date-fns adapter (loaded via script tags below) -->
-
   <!-- Local styles -->
   <link rel="stylesheet" href="css/style.css" />
 </head>
@@ -20,7 +18,7 @@
   <!-- ════════════════════════════════════════════════════════════
        SKIP LINK (accesibilidad / WCAG 2.4.1)
   ════════════════════════════════════════════════════════════ -->
-  <a class="skip-link" href="#main-content">Saltar al contenido principal</a>
+  <a class="skip-link" href="#main-content" data-i18n="skip.link">Saltar al contenido principal</a>
 
   <!-- ════════════════════════════════════════════════════════════
        CABECERA
@@ -34,13 +32,16 @@
           <text x="30" y="42" font-size="36" text-anchor="middle" fill="#003082">M</text>
         </svg>
         <div class="brand-text">
-          <span class="brand-city">Ayuntamiento de Madrid</span>
-          <span class="brand-title">Predicción de Contaminación Acústica</span>
+          <span class="brand-city" data-i18n="header.brand.city">Ayuntamiento de Madrid</span>
+          <span class="brand-title" data-i18n="header.brand.title">Predicción de Contaminación Acústica</span>
         </div>
       </div>
-      <div class="header-meta" aria-live="polite" aria-atomic="true">
-        <span id="last-updated-label">Última actualización:</span>
-        <span id="last-updated" class="meta-value">—</span>
+      <div class="header-actions">
+        <button id="lang-toggle" class="lang-toggle" aria-label="Switch language to English" lang="en">EN</button>
+        <div class="header-meta" aria-live="polite" aria-atomic="true">
+          <span id="last-updated-label" data-i18n="header.updated.label">Última actualización:</span>
+          <span id="last-updated" class="meta-value">—</span>
+        </div>
       </div>
     </div>
   </header>
@@ -48,33 +49,34 @@
   <!-- ════════════════════════════════════════════════════════════
        BARRA DE CONTROLES
   ════════════════════════════════════════════════════════════ -->
-  <div class="controls-bar" role="region" aria-label="Filtros del mapa">
+  <div class="controls-bar" role="region" data-i18n-aria="controls.aria" aria-label="Filtros del mapa">
     <div class="controls-inner">
 
       <!-- Período (diurno / nocturno) -->
       <fieldset class="control-group">
-        <legend class="control-label">Período</legend>
+        <legend class="control-label" data-i18n="controls.period.legend">Período</legend>
         <div class="radio-group" role="group">
           <label class="radio-btn">
             <input type="radio" name="period" value="daytime" checked
                    aria-describedby="period-hint" />
-            <span>Diurno <small>(07–23 h)</small></span>
+            <span><span data-i18n="controls.period.daytime">Diurno</span> <small>(07–23 h)</small></span>
           </label>
           <label class="radio-btn">
             <input type="radio" name="period" value="nighttime" />
-            <span>Nocturno <small>(23–07 h)</small></span>
+            <span><span data-i18n="controls.period.nighttime">Nocturno</span> <small>(23–07 h)</small></span>
           </label>
         </div>
-        <span id="period-hint" class="sr-only">Seleccione el período horario para mostrar en el mapa</span>
+        <span id="period-hint" class="sr-only" data-i18n="controls.period.hint">Seleccione el período horario para mostrar en el mapa</span>
       </fieldset>
 
       <!-- Día de predicción -->
       <div class="control-group">
         <label class="control-label" for="day-slider">
-          Día de predicción: <strong id="day-label" aria-live="polite">+1</strong>
+          <span data-i18n="controls.day.label">Día de predicción:</span> <strong id="day-label" aria-live="polite">+1</strong>
         </label>
         <input id="day-slider" type="range" min="1" max="14" value="1"
                aria-valuemin="1" aria-valuemax="14" aria-valuenow="1"
+               data-i18n-aria="controls.day.slider.aria"
                aria-label="Seleccionar día de predicción (1–14 días desde hoy)" />
       </div>
 
@@ -87,15 +89,17 @@
   <main id="main-content" class="main-content">
 
     <!-- Alerta si no hay datos -->
-    <div id="data-error" class="alert alert-error" role="alert" hidden>
+    <div id="data-error" class="alert alert-error" role="alert" hidden
+         data-i18n-html="error.message">
       <strong>Error:</strong> No se pudieron cargar los datos de predicción.
       Por favor, inténtelo de nuevo más tarde.
     </div>
 
     <!-- Spinner de carga -->
-    <div id="loading" class="loading-overlay" aria-busy="true" aria-label="Cargando datos…">
+    <div id="loading" class="loading-overlay" aria-busy="true"
+         data-i18n-aria="loading.aria" aria-label="Cargando datos…">
       <div class="spinner" aria-hidden="true"></div>
-      <p>Cargando predicciones…</p>
+      <p data-i18n="loading.text">Cargando predicciones…</p>
     </div>
 
     <!-- Cuadrícula principal: mapa + gráfico -->
@@ -104,53 +108,56 @@
       <!-- ── MAPA ─────────────────────────────────────────────── -->
       <section class="panel panel-map" aria-labelledby="map-heading">
         <h2 id="map-heading" class="panel-title">
-          Mapa de Estaciones
+          <span data-i18n="map.heading">Mapa de Estaciones</span>
           <span class="panel-subtitle" id="map-date-label" aria-live="polite"></span>
         </h2>
-        <div id="map" role="application" aria-label="Mapa interactivo de estaciones de ruido de Madrid.
-             Haga clic en un marcador para ver la predicción detallada de esa estación."></div>
+        <div id="map" role="application"
+             data-i18n-aria="map.aria"
+             aria-label="Mapa interactivo de estaciones de ruido de Madrid. Haga clic en un marcador para ver la predicción detallada de esa estación."></div>
 
         <!-- Leyenda -->
         <div class="map-legend" aria-label="Leyenda de niveles de ruido">
-          <h3 class="legend-title">Nivel LAeq (dB)</h3>
+          <h3 class="legend-title" data-i18n="legend.title">Nivel LAeq (dB)</h3>
           <ul class="legend-list" role="list">
-            <li><span class="legend-dot dot-green"  aria-hidden="true"></span>&lt; 55 dB — Bajo</li>
-            <li><span class="legend-dot dot-amber"  aria-hidden="true"></span>55–65 dB — Moderado</li>
-            <li><span class="legend-dot dot-red"    aria-hidden="true"></span>&ge; 65 dB — Alto</li>
+            <li><span class="legend-dot dot-green" aria-hidden="true"></span><span data-i18n="legend.low">&lt; 55 dB — Bajo</span></li>
+            <li><span class="legend-dot dot-amber" aria-hidden="true"></span><span data-i18n="legend.mid">55–65 dB — Moderado</span></li>
+            <li><span class="legend-dot dot-red"   aria-hidden="true"></span><span data-i18n="legend.high">≥ 65 dB — Alto</span></li>
           </ul>
-          <p class="legend-note">Umbrales basados en las directrices de la OMS para ruido ambiental (2018).</p>
+          <p class="legend-note" data-i18n="legend.note">Umbrales basados en las directrices de la OMS para ruido ambiental (2018).</p>
         </div>
       </section>
 
       <!-- ── GRÁFICO ──────────────────────────────────────────── -->
       <section class="panel panel-chart" aria-labelledby="chart-heading">
         <h2 id="chart-heading" class="panel-title">
-          Predicción — <span id="selected-station-name">Seleccione una estación</span>
+          <span data-i18n="chart.heading.prefix">Predicción</span> — <span id="selected-station-name">Seleccione una estación</span>
         </h2>
-        <div class="chart-hint" id="chart-hint" aria-live="polite">
+        <div class="chart-hint" id="chart-hint" aria-live="polite"
+             data-i18n="chart.hint">
           Haga clic en un marcador del mapa para ver la predicción de 14 días.
         </div>
         <div class="chart-wrapper" aria-hidden="false">
           <canvas id="forecast-chart" role="img"
+                  data-i18n-aria="chart.aria"
                   aria-label="Gráfico de líneas con la predicción de ruido a 14 días para la estación seleccionada"></canvas>
         </div>
 
         <!-- Métricas rápidas de la estación seleccionada -->
         <dl class="station-stats" id="station-stats" hidden>
           <div class="stat-item">
-            <dt>Clúster (diurno)</dt>
+            <dt data-i18n="stats.cluster.day">Clúster (diurno)</dt>
             <dd id="stat-cluster-day">—</dd>
           </div>
           <div class="stat-item">
-            <dt>Clúster (nocturno)</dt>
+            <dt data-i18n="stats.cluster.night">Clúster (nocturno)</dt>
             <dd id="stat-cluster-night">—</dd>
           </div>
           <div class="stat-item">
-            <dt>Máx. predicho (14 días)</dt>
+            <dt data-i18n="stats.max">Máx. predicho (14 días)</dt>
             <dd id="stat-max">—</dd>
           </div>
           <div class="stat-item">
-            <dt>Mín. predicho (14 días)</dt>
+            <dt data-i18n="stats.min">Mín. predicho (14 días)</dt>
             <dd id="stat-min">—</dd>
           </div>
         </dl>
@@ -160,16 +167,18 @@
 
     <!-- ── TABLA RESUMEN ────────────────────────────────────────── -->
     <section class="panel panel-table" aria-labelledby="table-heading" id="table-section" hidden>
-      <h2 id="table-heading" class="panel-title">Estaciones — Predicción de Ruido</h2>
-      <div class="table-scroll" role="region" aria-label="Tabla de estaciones con ruido predicho" tabindex="0">
+      <h2 id="table-heading" class="panel-title" data-i18n="table.heading">Estaciones — Predicción de Ruido</h2>
+      <div class="table-scroll" role="region"
+           data-i18n-aria="table.scroll.aria"
+           aria-label="Tabla de estaciones con ruido predicho" tabindex="0">
         <table class="noise-table" id="ranking-table">
-          <caption class="sr-only">Estaciones ordenadas por nivel de ruido LAeq predicho el día seleccionado</caption>
+          <caption class="sr-only" data-i18n="table.caption">Estaciones ordenadas por nivel de ruido LAeq predicho el día seleccionado</caption>
           <thead>
             <tr>
               <th scope="col">#</th>
-              <th scope="col" class="sortable" data-sort="name">Estación <span class="sort-icon" aria-hidden="true"></span></th>
-              <th scope="col" class="sortable" data-sort="laeq">LAeq predicho (dB) <span class="sort-icon" aria-hidden="true"></span></th>
-              <th scope="col">Nivel</th>
+              <th scope="col" class="sortable" data-sort="name"><span data-i18n="table.col.station">Estación</span> <span class="sort-icon" aria-hidden="true"></span></th>
+              <th scope="col" class="sortable" data-sort="laeq"><span data-i18n="table.col.laeq">LAeq predicho (dB)</span> <span class="sort-icon" aria-hidden="true"></span></th>
+              <th scope="col" data-i18n="table.col.level">Nivel</th>
             </tr>
           </thead>
           <tbody id="ranking-body">
@@ -177,9 +186,11 @@
         </table>
       </div>
       <div class="pagination" id="table-pagination">
-        <button id="page-prev" class="page-btn" disabled aria-label="Página anterior">&#8249;</button>
+        <button id="page-prev" class="page-btn" disabled
+                data-i18n-aria="table.page.prev" aria-label="Página anterior">&#8249;</button>
         <span id="page-info" class="page-info"></span>
-        <button id="page-next" class="page-btn" aria-label="Página siguiente">&#8250;</button>
+        <button id="page-next" class="page-btn"
+                data-i18n-aria="table.page.next" aria-label="Página siguiente">&#8250;</button>
       </div>
     </section>
 
@@ -190,11 +201,11 @@
   ════════════════════════════════════════════════════════════ -->
   <footer class="site-footer" role="contentinfo">
     <div class="footer-inner">
-      <p>
+      <p data-i18n-html="footer.data">
         Datos de ruido: <a href="https://datos.madrid.es" target="_blank" rel="noopener noreferrer">Portal de Datos Abiertos del Ayuntamiento de Madrid</a>.
         Predicciones generadas mediante modelos de aprendizaje automático y suavizados clásicos.
       </p>
-      <p>Actualización automática diaria · <span id="footer-updated"></span></p>
+      <p><span data-i18n="footer.auto">Actualización automática diaria</span> · <span id="footer-updated"></span></p>
     </div>
   </footer>
 
@@ -207,6 +218,9 @@
 
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+
+  <!-- i18n must load before app modules -->
+  <script src="js/i18n.js"></script>
 
   <!-- App modules -->
   <script src="js/map.js"></script>

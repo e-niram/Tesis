@@ -23,18 +23,17 @@ function noiseColor(v) {
 }
 
 /* ── WHO threshold annotation bands ────────────────────────────────────── */
-// Rendered as horizontal reference lines via Chart.js annotation plugin.
-// We draw them manually as dataset lines to avoid needing an extra CDN dep.
-const WHO_LINES = [
-  { y: 55, label: 'OMS: Moderado (55 dB)', color: 'rgba(230,81,0,.5)',  dash: [6,4] },
-  { y: 65, label: 'OMS: Alto (65 dB)',     color: 'rgba(198,40,40,.5)', dash: [4,4] },
-];
+function getWhoLines() {
+  return [
+    { y: 55, label: I18n.t('chart.who.mid'),  color: 'rgba(230,81,0,.5)',  dash: [6,4] },
+    { y: 65, label: I18n.t('chart.who.high'), color: 'rgba(198,40,40,.5)', dash: [4,4] },
+  ];
+}
 
 /* ── Format helpers ─────────────────────────────────────────────────────── */
 function formatDate(iso) {
-  // "2025-04-13" → "13 abr"
   const [, m, d] = iso.split('-');
-  const months = ['','ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  const months = I18n.t('months');
   return `${parseInt(d)} ${months[parseInt(m)]}`;
 }
 
@@ -79,7 +78,7 @@ function initChart() {
         y: {
           title: {
             display: true,
-            text: 'Nivel LAeq (dB)',
+            text: I18n.t('chart.y.title'),
             font: { family: "'Source Sans Pro', sans-serif", size: 12 },
             color: '#555',
           },
@@ -113,10 +112,10 @@ function updateChart(station, period) {
   const labels  = forecast.map(e => formatDate(e.date));
   const values  = forecast.map(e => e.laeq);
   const pal     = PALETTE[period];
-  const periodLabel = period === 'daytime' ? 'Diurno' : 'Nocturno';
+  const periodLabel = period === 'daytime' ? I18n.t('chart.period.daytime') : I18n.t('chart.period.nighttime');
 
   // Build WHO horizontal reference datasets (one point per day so they span full x-axis)
-  const whoDatasets = WHO_LINES.map(ref => ({
+  const whoDatasets = getWhoLines().map(ref => ({
     label: ref.label,
     data:  labels.map(() => ref.y),
     borderColor: ref.color,
@@ -133,7 +132,7 @@ function updateChart(station, period) {
   _chart.data.labels = labels;
   _chart.data.datasets = [
     {
-      label: `Predicción (${periodLabel})`,
+      label: `${I18n.t('chart.prediction')} (${periodLabel})`,
       data: values,
       borderColor: pal.line,       // legend swatch colour
       backgroundColor: 'rgba(0,0,0,.04)',
@@ -157,6 +156,7 @@ function updateChart(station, period) {
   const maxVal = Math.max(...values, 70);
   _chart.options.scales.y.min = Math.floor(minVal - 3);
   _chart.options.scales.y.max = Math.ceil(maxVal + 3);
+  _chart.options.scales.y.title.text = I18n.t('chart.y.title');
 
   _chart.update('active');
 }

@@ -152,10 +152,37 @@ a:focus-visible {
 	font-weight: 700;
 }
 
+.header-actions {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+}
+
 .header-meta {
 	font-size: 0.8rem;
 	opacity: 0.9;
 	white-space: nowrap;
+}
+
+.lang-toggle {
+	background: rgba(255, 255, 255, 0.15);
+	border: 1.5px solid rgba(255, 255, 255, 0.5);
+	color: #fff;
+	font-family: var(--font-sans);
+	font-size: 0.78rem;
+	font-weight: 700;
+	padding: 5px 12px;
+	border-radius: var(--radius);
+	cursor: pointer;
+	letter-spacing: 0.08em;
+	transition: background 0.15s, border-color 0.15s;
+	white-space: nowrap;
+	flex-shrink: 0;
+}
+
+.lang-toggle:hover {
+	background: rgba(255, 255, 255, 0.28);
+	border-color: rgba(255, 255, 255, 0.85);
 }
 
 .meta-value {
@@ -815,7 +842,8 @@ th.sort-desc .sort-icon::after {
 @media print {
 	.controls-bar,
 	.site-footer,
-	.skip-link {
+	.skip-link,
+	.lang-toggle {
 		display: none;
 	}
 	.panel {
