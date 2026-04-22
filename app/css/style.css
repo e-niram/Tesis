@@ -591,6 +591,19 @@ a:focus-visible {
 	opacity: 1;
 }
 
+.info-btn--sm {
+	width: 12px;
+	height: 12px;
+	font-size: 0.5rem;
+	border-width: 1px;
+}
+
+.stat-dd-with-info {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+}
+
 .info-popover {
 	display: none;
 	position: absolute;
