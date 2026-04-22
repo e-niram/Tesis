@@ -47,6 +47,8 @@ VALID_STATIONS = {
     1, 2, 3, 5, 6, 8, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20,
     24, 25, 26, 27, 28, 29, 30, 31, 47, 48, 50, 54, 55, 86,
 }
+# Stations explicitly excluded from data/final/ (e.g. Plaza de España — inconsistent coverage)
+EXCLUDED_STATIONS = {4}
 
 
 # ── Physical conversion (mirrors 03_handle_missing.py) ────────────────────────
@@ -65,16 +67,30 @@ def fetch_day(target_date: date) -> pd.DataFrame:
     """
     Fetch all records for *target_date* from the CKAN API.
     Returns a raw DataFrame with original API columns.
-    Raises RuntimeError if the API call fails or returns no data.
+    Raises RuntimeError if the API is unreachable, returns an error, or has no data.
+
+    Note: the API rejects filtering by "Año" (HTTP 409), so we filter only by
+    mes+dia and then drop non-matching years in Python.
     """
     params = {
         "resource_id": RESOURCE_ID,
         "limit": API_LIMIT,
-        "filters": f'{{"Año":"{target_date.year}","mes":"{target_date.month}","dia":"{target_date.day}"}}',
+        "filters": f'{{"mes":"{target_date.month}","dia":"{target_date.day}"}}',
     }
-    resp = requests.get(API_URL, params=params, timeout=30)
-    resp.raise_for_status()
-    result = resp.json()
+    try:
+        resp = requests.get(API_URL, params=params, timeout=30)
+        resp.raise_for_status()
+    except requests.exceptions.ConnectionError as exc:
+        raise RuntimeError(f"Could not connect to API: {exc}") from exc
+    except requests.exceptions.Timeout as exc:
+        raise RuntimeError(f"API request timed out after 30 s: {exc}") from exc
+    except requests.exceptions.HTTPError as exc:
+        raise RuntimeError(f"API returned HTTP error: {exc}") from exc
+
+    try:
+        result = resp.json()
+    except ValueError as exc:
+        raise RuntimeError(f"API response is not valid JSON: {exc}") from exc
 
     if not result.get("success"):
         raise RuntimeError(f"API returned success=false: {result}")
@@ -86,7 +102,23 @@ def fetch_day(target_date: date) -> pd.DataFrame:
             "The API may not have published data for this date yet."
         )
 
-    return pd.DataFrame(records)
+    df = pd.DataFrame(records)
+
+    # Filter to the target year locally (API rejects the "Año" filter as of 2026)
+    year_col = next(
+        (c for c in df.columns if c.strip().lower() in ("año", "anio", "year", "ano")),
+        None,
+    )
+    if year_col:
+        df = df[df[year_col].astype(str).str.strip() == str(target_date.year)].copy()
+
+    if df.empty:
+        raise RuntimeError(
+            f"No records found for year {target_date.year} after local filter. "
+            "The API may not have published data for this date yet."
+        )
+
+    return df
 
 
 # ── Cleaning ───────────────────────────────────────────────────────────────────
@@ -102,9 +134,9 @@ def clean_raw(raw: pd.DataFrame, target_date: date) -> dict[str, pd.Series]:
     # Normalise column names (API may return with accents or varying case)
     df.columns = [c.strip() for c in df.columns]
 
-    # Station ID
+    # Station ID — keep only known valid stations, drop explicit exclusions
     df["NMT"] = pd.to_numeric(df["NMT"], errors="coerce").astype("Int64")
-    df = df[df["NMT"].isin(VALID_STATIONS)].copy()
+    df = df[df["NMT"].isin(VALID_STATIONS) & ~df["NMT"].isin(EXCLUDED_STATIONS)].copy()
 
     # Period type
     df["tipo"] = df["tipo"].str.strip().str.upper()
