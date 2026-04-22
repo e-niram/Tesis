@@ -68,14 +68,18 @@ def fetch_day(target_date: date) -> pd.DataFrame:
     Fetch all records for *target_date* from the CKAN API.
     Returns a raw DataFrame with original API columns.
     Raises RuntimeError if the API is unreachable, returns an error, or has no data.
-
-    Note: the API rejects filtering by "Año" (HTTP 409), so we filter only by
-    mes+dia and then drop non-matching years in Python.
     """
+    # The year field was renamed from "Año" to "Ano" (no accent) in the CKAN schema.
+    # Using "Año" causes HTTP 409; "Ano" works correctly.
+    filters = (
+        f'{{"Ano":"{target_date.year}",'
+        f'"mes":"{target_date.month}",'
+        f'"dia":"{target_date.day}"}}'
+    )
     params = {
         "resource_id": RESOURCE_ID,
         "limit": API_LIMIT,
-        "filters": f'{{"mes":"{target_date.month}","dia":"{target_date.day}"}}',
+        "filters": filters,
     }
     try:
         resp = requests.get(API_URL, params=params, timeout=30)
@@ -102,23 +106,7 @@ def fetch_day(target_date: date) -> pd.DataFrame:
             "The API may not have published data for this date yet."
         )
 
-    df = pd.DataFrame(records)
-
-    # Filter to the target year locally (API rejects the "Año" filter as of 2026)
-    year_col = next(
-        (c for c in df.columns if c.strip().lower() in ("año", "anio", "year", "ano")),
-        None,
-    )
-    if year_col:
-        df = df[df[year_col].astype(str).str.strip() == str(target_date.year)].copy()
-
-    if df.empty:
-        raise RuntimeError(
-            f"No records found for year {target_date.year} after local filter. "
-            "The API may not have published data for this date yet."
-        )
-
-    return df
+    return pd.DataFrame(records)
 
 
 # ── Cleaning ───────────────────────────────────────────────────────────────────
