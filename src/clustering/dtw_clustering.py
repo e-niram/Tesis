@@ -3,7 +3,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import os
+import time
 import warnings
+from datetime import datetime
 from itertools import product as iterproduct
 from typing import Optional
 from tslearn.clustering import TimeSeriesKMeans
@@ -17,6 +19,8 @@ BASE_DIR    = 'results/clustering'
 PLOTS_DIR   = os.path.join(BASE_DIR, 'plots')
 METRICS_DIR = os.path.join(BASE_DIR, 'metrics')
 TUNING_DIR  = os.path.join(BASE_DIR, 'tuning')
+CHECKPOINT_FILE = os.path.join(METRICS_DIR, 'Tuning_All.csv')
+
 for _d in [PLOTS_DIR, METRICS_DIR, TUNING_DIR]:
     os.makedirs(_d, exist_ok=True)
 
@@ -40,6 +44,35 @@ PERIOD_LABELS = {'nighttime': 'Nocturno', 'daytime': 'Diurno'}
 # above 25 % the warping is nearly unconstrained.
 # Reference: Ratanamahatana & Keogh (2004).
 SC_FRACTIONS = [0.05, 0.10, 0.20]
+
+# ── Logging & checkpoint ──────────────────────────────────────────────────────
+
+def _log(msg: str) -> None:
+    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {msg}", flush=True)
+
+
+def _checkpoint_key(record: dict) -> tuple:
+    return (record['period'], record['config_label'],
+            record['max_iter'], record['n_init'], record['n_clusters'])
+
+
+def load_checkpoint() -> tuple[None, set]:
+    """Load existing results from disk; return (None, done_keys)."""
+    if not os.path.exists(CHECKPOINT_FILE):
+        return None, set()
+    df = pd.read_csv(CHECKPOINT_FILE, sep=';')
+    done_keys = {_checkpoint_key(r) for r in df.to_dict('records')}
+    _log(f"Checkpoint loaded: {len(df)} records, {len(done_keys)} completed combos")
+    return None, done_keys
+
+
+def _save_record(record: dict) -> None:
+    """Append one record to the checkpoint CSV (writes header on first call)."""
+    write_header = not os.path.exists(CHECKPOINT_FILE)
+    pd.DataFrame([record]).to_csv(
+        CHECKPOINT_FILE, mode='a', header=write_header, index=False, sep=';'
+    )
+
 
 # ── Config helpers ────────────────────────────────────────────────────────────
 
@@ -119,7 +152,7 @@ def build_dtw_dist_matrix(X_3d: np.ndarray, mp: Optional[dict]) -> np.ndarray:
 # ── Tuning ────────────────────────────────────────────────────────────────────
 
 def _load_period_data(period: str) -> tuple[np.ndarray, np.ndarray, int]:
-    df = pd.read_csv(f'data/test/{period}_final_test.csv', sep=';')
+    df = pd.read_csv(f'data/final/{period}_final.csv', sep=';')
     df['FECHA'] = pd.to_datetime(df['FECHA'])
     df_num = df.select_dtypes(include='number')
     X_2d = df_num.T.values
@@ -153,29 +186,52 @@ def _fit_config(X_2d: np.ndarray, X_3d: np.ndarray,
             float(np.nanmean(sils)), float(np.nanstd(sils)))
 
 
-def run_tuning_period(period: str) -> list[dict]:
-    """Run the full hyperparameter grid for one period; return a list of result records."""
-    print(f"{'='*60}\nPERIOD: {period}\n{'='*60}")
+def run_tuning_period(period: str, done_keys: set) -> None:
+    """Run the hyperparameter grid for one period, skipping already-completed combos."""
+    _log(f"{'='*60}")
+    _log(f"PERIOD: {period}")
+    _log(f"{'='*60}")
     X_2d, X_3d, n_timesteps = _load_period_data(period)
     configs = build_configs(n_timesteps)
 
-    n_fits = (len(configs) * len(MAX_ITER_LIST) * len(N_INIT_LIST) *
-              len(N_CLUSTERS_LIST) * len(TUNING_SEEDS))
-    print(f"  Series length: {n_timesteps} time steps")
-    print(f"  SC radii:      {[round(f * n_timesteps) for f in SC_FRACTIONS]}"
-          f"  (= {[f'{int(f*100)}%' for f in SC_FRACTIONS]} of N)")
-    print(f"  Total fits:    {n_fits}\n")
+    n_total = (len(configs) * len(MAX_ITER_LIST) * len(N_INIT_LIST) * len(N_CLUSTERS_LIST))
+    n_done  = sum(
+        1 for metric, mp in configs
+        for max_iter, n_init, k in iterproduct(MAX_ITER_LIST, N_INIT_LIST, N_CLUSTERS_LIST)
+        if (period, config_label(metric, mp), max_iter, n_init, k) in done_keys
+    )
+    _log(f"  Series length : {n_timesteps} time steps")
+    _log(f"  SC radii      : {[round(f * n_timesteps) for f in SC_FRACTIONS]}"
+         f"  (= {[f'{int(f*100)}%' for f in SC_FRACTIONS]} of N)")
+    _log(f"  Combos        : {n_done}/{n_total} already done, {n_total - n_done} remaining\n")
 
-    records = []
     for metric, mp in configs:
         lbl = config_label(metric, mp)
-        print(f"  Config: {lbl}")
-        dist_matrix = build_dtw_dist_matrix(X_3d, mp) if metric == 'dtw' else None
 
-        for max_iter, n_init, k in iterproduct(MAX_ITER_LIST, N_INIT_LIST, N_CLUSTERS_LIST):
+        pending = [
+            (max_iter, n_init, k)
+            for max_iter, n_init, k in iterproduct(MAX_ITER_LIST, N_INIT_LIST, N_CLUSTERS_LIST)
+            if (period, lbl, max_iter, n_init, k) not in done_keys
+        ]
+        if not pending:
+            _log(f"  Config: {lbl} — all combos done, skipping")
+            continue
+
+        _log(f"  Config: {lbl} — {len(pending)} combos remaining")
+
+        if metric == 'dtw':
+            t0 = time.monotonic()
+            dist_matrix = build_dtw_dist_matrix(X_3d, mp)
+            _log(f"    dist_matrix computed in {time.monotonic() - t0:.1f}s")
+        else:
+            dist_matrix = None
+
+        for max_iter, n_init, k in pending:
+            t0 = time.monotonic()
             mi_mean, mi_std, sil_mean, sil_std = _fit_config(
                 X_2d, X_3d, metric, mp, dist_matrix, max_iter, n_init, k)
-            records.append(dict(
+            elapsed = time.monotonic() - t0
+            record = dict(
                 period=period,
                 metric=metric,
                 metric_params=str(mp),
@@ -187,20 +243,21 @@ def run_tuning_period(period: str) -> list[dict]:
                 std_inertia=mi_std,
                 mean_silhouette=sil_mean,
                 std_silhouette=sil_std,
-            ))
-            print(f"    k={k}  max_iter={max_iter}  n_init={n_init} → "
-                  f"inertia={mi_mean:.1f}±{mi_std:.1f}  sil={sil_mean:.4f}")
-    return records
+            )
+            _save_record(record)
+            done_keys.add((period, lbl, max_iter, n_init, k))
+            _log(f"    k={k}  max_iter={max_iter}  n_init={n_init} → "
+                 f"inertia={mi_mean:.1f}±{mi_std:.1f}  sil={sil_mean:.4f}  "
+                 f"({elapsed:.1f}s)")
 
 
 def run_tuning() -> pd.DataFrame:
-    """Run the full tuning grid for all periods, save results, and return the DataFrame."""
-    records = []
+    """Run the full tuning grid for all periods, resuming from checkpoint if present."""
+    _, done_keys = load_checkpoint()
     for period in PERIODS:
-        records.extend(run_tuning_period(period))
-    tuning_df = pd.DataFrame(records)
-    tuning_df.to_csv(f"{METRICS_DIR}/Tuning_All.csv", index=False, sep=';')
-    print("\nTuning results saved to Tuning_All.csv")
+        run_tuning_period(period, done_keys)
+    tuning_df = pd.read_csv(CHECKPOINT_FILE, sep=';')
+    _log(f"\nTuning complete — {len(tuning_df)} records in {CHECKPOINT_FILE}")
     return tuning_df
 
 # ── Plots ─────────────────────────────────────────────────────────────────────
@@ -354,7 +411,7 @@ def run_production_period(period: str, best: pd.Series) -> dict:
     """Fit the final model for one period using best params; save assignments and plot."""
     print(f"\n  Period: {period}")
 
-    df = pd.read_csv(f'data/test/{period}_final_test.csv', sep=';')
+    df = pd.read_csv(f'data/final/{period}_final.csv', sep=';')
     df['FECHA'] = pd.to_datetime(df['FECHA'])
     dates       = df['FECHA']
     df_num      = df.select_dtypes(include='number')
