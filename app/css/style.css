@@ -563,16 +563,25 @@ a:focus-visible {
 }
 
 .info-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 16px;
+	height: 16px;
+	flex-shrink: 0;
+	border-radius: 50%;
+	border: 1.5px solid currentColor;
 	background: none;
-	border: none;
 	cursor: pointer;
 	color: var(--color-text-muted);
-	font-size: 0.85em;
+	font-size: 0.6rem;
+	font-style: italic;
+	font-weight: 700;
 	text-transform: none;
 	letter-spacing: 0;
-	padding: 0 1px;
+	padding: 0;
 	line-height: 1;
-	opacity: 0.65;
+	opacity: 0.6;
 	transition: color 0.15s, opacity 0.15s;
 }
 
