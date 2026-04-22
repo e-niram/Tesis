@@ -881,6 +881,19 @@ th.sort-desc .sort-icon::after {
 	.stat-item:nth-child(2) {
 		border-right: none;
 	}
+
+	/* Cluster nocturno is top-right on mobile — flip popover leftward to avoid overflow */
+	.stat-item:nth-child(2) .info-popover {
+		left: auto;
+		right: 0;
+		transform: none;
+	}
+
+	.stat-item:nth-child(2) .info-popover::after {
+		left: auto;
+		right: 8px;
+		transform: none;
+	}
 	.stat-item:nth-child(3) {
 		border-top: 1px solid var(--color-border);
 	}
