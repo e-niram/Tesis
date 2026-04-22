@@ -517,6 +517,7 @@ a:focus-visible {
 .panel-chart {
 	display: flex;
 	flex-direction: column;
+	overflow: visible; /* allow cluster info tooltips to float above the stats bar */
 }
 
 .chart-hint {
@@ -550,6 +551,73 @@ a:focus-visible {
 }
 .noise-high {
 	color: var(--color-high) !important;
+}
+
+/* Cluster info icon + popover */
+.info-wrap {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	vertical-align: middle;
+	margin-left: 3px;
+}
+
+.info-btn {
+	background: none;
+	border: none;
+	cursor: pointer;
+	color: var(--color-text-muted);
+	font-size: 0.85em;
+	text-transform: none;
+	letter-spacing: 0;
+	padding: 0 1px;
+	line-height: 1;
+	opacity: 0.65;
+	transition: color 0.15s, opacity 0.15s;
+}
+
+.info-btn:hover,
+.info-btn:focus-visible {
+	color: var(--color-primary);
+	opacity: 1;
+}
+
+.info-popover {
+	display: none;
+	position: absolute;
+	bottom: calc(100% + 8px);
+	left: 50%;
+	transform: translateX(-50%);
+	width: 220px;
+	background: #2d3748;
+	color: #fff;
+	font-size: 0.75rem;
+	font-weight: 400;
+	text-transform: none;
+	letter-spacing: 0;
+	padding: 8px 11px;
+	border-radius: var(--radius);
+	z-index: 300;
+	pointer-events: none;
+	line-height: 1.45;
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+	white-space: normal;
+}
+
+.info-popover::after {
+	content: '';
+	position: absolute;
+	top: 100%;
+	left: 50%;
+	transform: translateX(-50%);
+	border: 5px solid transparent;
+	border-top-color: #2d3748;
+}
+
+.info-wrap:hover .info-popover,
+.info-wrap:focus-within .info-popover,
+.info-wrap.active .info-popover {
+	display: block;
 }
 
 /* Station stats */

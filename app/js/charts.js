@@ -60,8 +60,13 @@ function initChart() {
           },
         },
         tooltip: {
+          filter: item => item.datasetIndex === 0,
           callbacks: {
-            label: (ctx) => ` ${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)} dB`,
+            label: (ctx) => {
+              const val = ctx.parsed.y;
+              const level = val < 55 ? I18n.t('noise.low') : val < 65 ? I18n.t('noise.mid') : I18n.t('noise.high');
+              return ` ${ctx.dataset.label}: ${val.toFixed(1)} dB — ${level}`;
+            },
           },
           bodyFont: { family: "'Source Sans Pro', sans-serif" },
           titleFont: { family: "'Source Sans Pro', sans-serif", weight: '600' },

@@ -250,11 +250,23 @@
 					<!-- Métricas rápidas de la estación seleccionada -->
 					<dl class="station-stats" id="station-stats" hidden>
 						<div class="stat-item">
-							<dt data-i18n="stats.cluster.day">Clúster (diurno)</dt>
+							<dt>
+								<span data-i18n="stats.cluster.day">Clúster (diurno)</span>
+								<span class="info-wrap">
+									<button class="info-btn" data-i18n-aria="cluster.info.aria" aria-label="Más información sobre el clúster" aria-describedby="cluster-day-tooltip">ℹ</button>
+									<span class="info-popover" id="cluster-day-tooltip" role="tooltip" data-i18n="cluster.info.tooltip">Según el análisis histórico, esta estación fue agrupada con aquellas que presentan un nivel de ruido similar.</span>
+								</span>
+							</dt>
 							<dd id="stat-cluster-day">—</dd>
 						</div>
 						<div class="stat-item">
-							<dt data-i18n="stats.cluster.night">Clúster (nocturno)</dt>
+							<dt>
+								<span data-i18n="stats.cluster.night">Clúster (nocturno)</span>
+								<span class="info-wrap">
+									<button class="info-btn" data-i18n-aria="cluster.info.aria" aria-label="Más información sobre el clúster" aria-describedby="cluster-night-tooltip">ℹ</button>
+									<span class="info-popover" id="cluster-night-tooltip" role="tooltip" data-i18n="cluster.info.tooltip">Según el análisis histórico, esta estación fue agrupada con aquellas que presentan un nivel de ruido similar.</span>
+								</span>
+							</dt>
 							<dd id="stat-cluster-night">—</dd>
 						</div>
 						<div class="stat-item">

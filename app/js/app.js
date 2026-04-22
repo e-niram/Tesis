@@ -236,6 +236,20 @@ async function bootstrap() {
   DOM.pagePrev.addEventListener('click', () => { tbl.page--; _renderPage(); });
   DOM.pageNext.addEventListener('click', () => { tbl.page++; _renderPage(); });
 
+  // Info-icon tap support (mobile: click toggles popover; click elsewhere closes)
+  document.querySelectorAll('.info-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const wrap = btn.closest('.info-wrap');
+      const wasActive = wrap.classList.contains('active');
+      document.querySelectorAll('.info-wrap.active').forEach(w => w.classList.remove('active'));
+      if (!wasActive) wrap.classList.add('active');
+    });
+  });
+  document.addEventListener('click', () => {
+    document.querySelectorAll('.info-wrap.active').forEach(w => w.classList.remove('active'));
+  });
+
   // Set translated station placeholder
   DOM.stationName.textContent = I18n.t('chart.station.placeholder');
 
