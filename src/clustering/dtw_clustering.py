@@ -19,16 +19,16 @@ BASE_DIR    = 'results/clustering'
 PLOTS_DIR   = os.path.join(BASE_DIR, 'plots')
 METRICS_DIR = os.path.join(BASE_DIR, 'metrics')
 TUNING_DIR  = os.path.join(BASE_DIR, 'tuning')
-CHECKPOINT_FILE = os.path.join(METRICS_DIR, 'Tuning_All.csv')
+CHECKPOINT_FILE = os.path.join(METRICS_DIR, 'Tuning_All_K3.csv')
 
 for _d in [PLOTS_DIR, METRICS_DIR, TUNING_DIR]:
     os.makedirs(_d, exist_ok=True)
 
 # ── Static parameter grid ─────────────────────────────────────────────────────
-N_CLUSTERS_LIST   = [2, 3, 4, 5]
+N_CLUSTERS_LIST   = [3]
 MAX_ITER_LIST     = [20, 50]
-N_INIT_LIST       = [3, 5]
-TUNING_SEEDS      = [42, 43, 44]
+N_INIT_LIST       = [5]
+TUNING_SEEDS      = [42]
 PRODUCTION_SEED   = 42    # fixed for reproducibility
 PRODUCTION_N_INIT = 10    # best of 10 random initializations
 
@@ -82,7 +82,6 @@ def build_configs(n_timesteps: int) -> list[tuple]:
     Sakoe-Chiba radii are derived from n_timesteps so the band scales with the data.
     """
     configs = [('euclidean', None)]
-    configs.append(('dtw', None))                   # unconstrained DTW
     for frac in SC_FRACTIONS:
         r = max(1, round(frac * n_timesteps))
         configs.append(('dtw', {'global_constraint': 'sakoe_chiba',

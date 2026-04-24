@@ -1,4 +1,5 @@
-period;metric;metric_params;config_label;max_iter;n_init;n_clusters;mean_inertia;std_inertia;mean_silhouette;std_silhouettenighttime;euclidean;None;Euclidiana;20;3;2;45536.345150982146;0.0;0.4948695210206531;5.551115123125783e-17
+period;metric;metric_params;config_label;max_iter;n_init;n_clusters;mean_inertia;std_inertia;mean_silhouette;std_silhouette
+nighttime;euclidean;None;Euclidiana;20;3;2;45536.345150982146;0.0;0.4948695210206531;5.551115123125783e-17
 nighttime;euclidean;None;Euclidiana;20;3;3;30354.42320833953;5.189014151397526;0.37191788767832307;0.0031201818979247602
 nighttime;euclidean;None;Euclidiana;20;3;4;21782.437926490267;174.691682977229;0.3334377725061528;0.002526437884528031
 nighttime;euclidean;None;Euclidiana;20;3;5;15810.271103216466;174.69168297722752;0.3395256117940817;0.004620292156940511
