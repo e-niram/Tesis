@@ -37,3 +37,66 @@ nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 201};DT
 nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 201};DTW Sakoe-Chiba r=201;20;3;5;6028.38009401892;151.9850829254368;0.33211608166352635;0.010567466972837267
 nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 201};DTW Sakoe-Chiba r=201;20;5;2;10922.426691647981;203.47424747500105;0.5500006919261928;0.0
 nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 201};DTW Sakoe-Chiba r=201;20;5;3;8530.797180223535;36.34386954440806;0.41973427988609774;0.002304138298923933
+nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 201};DTW Sakoe-Chiba r=201;20;5;4;6909.8465983694;76.68403804606398;0.3339385932266172;0.00037062302192838363
+nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 201};DTW Sakoe-Chiba r=201;20;5;5;6018.620301298794;138.2439360424616;0.3270400687395159;0.01770937766626935
+nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 201};DTW Sakoe-Chiba r=201;50;3;2;10983.590777733807;227.68191314018077;0.544335061588754;0.00801241126259845
+nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 201};DTW Sakoe-Chiba r=201;50;3;3;8703.881616244293;88.74700157045376;0.421104262620158;0.0007307409535742168
+nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 201};DTW Sakoe-Chiba r=201;50;3;4;7035.745224719474;246.03005996411395;0.3194508736283577;0.020120368099401265
+nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 201};DTW Sakoe-Chiba r=201;50;3;5;6028.38009401892;151.9850829254368;0.33211608166352635;0.010567466972837267
+nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 201};DTW Sakoe-Chiba r=201;50;5;2;10922.426691647981;203.47424747500105;0.5500006919261928;0.0
+nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 201};DTW Sakoe-Chiba r=201;50;5;3;8530.797180223535;36.34386954440806;0.41973427988609774;0.002304138298923933
+nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 201};DTW Sakoe-Chiba r=201;50;5;4;6909.8465983694;76.68403804606398;0.3339385932266172;0.00037062302192838363
+nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 201};DTW Sakoe-Chiba r=201;50;5;5;6018.620301298794;138.2439360424616;0.3270400687395159;0.01770937766626935
+nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 402};DTW Sakoe-Chiba r=402;20;3;2;10320.334440641762;59.347711202490885;0.5261263390888894;0.008647692160355205
+nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 402};DTW Sakoe-Chiba r=402;20;3;3;8516.867399671333;98.76315310438582;0.35150502021798896;0.01873096566302895
+nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 402};DTW Sakoe-Chiba r=402;20;3;4;6940.892425879657;143.92656961640387;0.309729265459918;0.0001208866549104059
+nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 402};DTW Sakoe-Chiba r=402;20;3;5;5959.839751453083;75.84739763396897;0.3150378382338735;0.002627833787574353
+nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 402};DTW Sakoe-Chiba r=402;20;5;2;10287.9633892498;44.06756734432743;0.5322411808570904;0.0
+nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 402};DTW Sakoe-Chiba r=402;20;5;3;8291.417818822278;87.99401698089152;0.3802665813503037;0.01143108026252455
+nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 402};DTW Sakoe-Chiba r=402;20;5;4;6849.800997788182;23.192659291520336;0.31039361248448055;0.0010054372122209464
+nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 402};DTW Sakoe-Chiba r=402;20;5;5;5959.839751453083;75.84739763396897;0.3150378382338735;0.002627833787574353
+nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 402};DTW Sakoe-Chiba r=402;50;3;2;10320.334440641762;59.347711202490885;0.5261263390888894;0.008647692160355205
+nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 402};DTW Sakoe-Chiba r=402;50;3;3;8516.867399671333;98.76315310438582;0.35150502021798896;0.01873096566302895
+nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 402};DTW Sakoe-Chiba r=402;50;3;4;6940.892425879657;143.92656961640387;0.309729265459918;0.0001208866549104059
+nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 402};DTW Sakoe-Chiba r=402;50;3;5;5959.839751453083;75.84739763396897;0.3150378382338735;0.002627833787574353
+nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 402};DTW Sakoe-Chiba r=402;50;5;2;10287.9633892498;44.06756734432743;0.5322411808570904;0.0
+nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 402};DTW Sakoe-Chiba r=402;50;5;3;8291.417818822278;87.99401698089152;0.3802665813503037;0.01143108026252455
+nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 402};DTW Sakoe-Chiba r=402;50;5;4;6849.800997788182;23.192659291520336;0.31039361248448055;0.0010054372122209464
+nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 402};DTW Sakoe-Chiba r=402;50;5;5;5959.839751453083;75.84739763396897;0.3150378382338735;0.002627833787574353
+nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 803};DTW Sakoe-Chiba r=803;20;3;2;9829.65758368038;51.2472908496054;0.4968599011882731;0.00042059857921205457
+nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 803};DTW Sakoe-Chiba r=803;20;3;3;8149.6166630214675;33.25665411125395;0.3424005040614532;0.00023257928639875376
+nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 803};DTW Sakoe-Chiba r=803;20;3;4;6853.379996989982;80.33748772196654;0.2718696332495778;0.00076163652323878
+nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 803};DTW Sakoe-Chiba r=803;20;3;5;6134.698607662664;204.52515094256194;0.24349295666692505;0.027643225586169336
+nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 803};DTW Sakoe-Chiba r=803;20;5;2;9829.65758368038;51.2472908496054;0.4968599011882731;0.00042059857921205457
+nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 803};DTW Sakoe-Chiba r=803;20;5;3;8130.668175685147;33.5861362953201;0.3424005040614532;0.00023257928639875376
+nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 803};DTW Sakoe-Chiba r=803;20;5;4;6740.088065039021;11.49897433713082;0.27181556447687805;0.002615686998335116
+nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 803};DTW Sakoe-Chiba r=803;20;5;5;6134.698607662664;204.52515094256236;0.24349295666692505;0.027643225586169336
+nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 803};DTW Sakoe-Chiba r=803;50;3;2;9829.65758368038;51.24729084960625;0.4968599011882731;0.00042059857921205457
+nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 803};DTW Sakoe-Chiba r=803;50;3;3;8149.6166630214675;33.25665411125405;0.3424005040614532;0.00023257928639875376
+nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 803};DTW Sakoe-Chiba r=803;50;3;4;6853.379996989982;80.33748772196654;0.2718696332495778;0.00076163652323878
+nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 803};DTW Sakoe-Chiba r=803;50;3;5;6134.698607662664;204.52515094256236;0.24349295666692505;0.027643225586169336
+nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 803};DTW Sakoe-Chiba r=803;50;5;2;9829.65758368038;51.24729084960625;0.4968599011882731;0.00042059857921205457
+nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 803};DTW Sakoe-Chiba r=803;50;5;3;8130.669709375667;33.5852445448705;0.3424005040614532;0.00023257928639875376
+nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 803};DTW Sakoe-Chiba r=803;50;5;4;6740.088065039021;11.49897433713082;0.27181556447687805;0.002615686998335116
+nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 803};DTW Sakoe-Chiba r=803;50;5;5;6134.698607662664;204.52515094256236;0.24349295666692505;0.027643225586169336
+daytime;euclidean;None;Euclidiana;20;3;2;43027.062270185124;0.0;0.4399219943655807;0.0
+daytime;euclidean;None;Euclidiana;20;3;3;26234.568122650395;20.745836910383147;0.37890925109145696;0.002679650171626411
+daytime;euclidean;None;Euclidiana;20;3;4;17859.098514373014;0.0;0.37609100170153315;5.551115123125783e-17
+daytime;euclidean;None;Euclidiana;20;3;5;14012.11841599567;1.8189894035458565e-12;0.3258564876750833;0.0
+daytime;euclidean;None;Euclidiana;20;5;2;43027.062270185124;0.0;0.4399219943655807;0.0
+daytime;euclidean;None;Euclidiana;20;5;3;26219.898600689674;20.745836910383147;0.3808040498990217;0.002679650171626411
+daytime;euclidean;None;Euclidiana;20;5;4;17859.098514373014;0.0;0.37609100170153315;5.551115123125783e-17
+daytime;euclidean;None;Euclidiana;20;5;5;14012.11841599567;1.8189894035458565e-12;0.3258564876750833;0.0
+daytime;euclidean;None;Euclidiana;50;3;2;43027.062270185124;0.0;0.4399219943655807;0.0
+daytime;euclidean;None;Euclidiana;50;3;3;26234.568122650395;20.745836910383147;0.37890925109145696;0.002679650171626411
+daytime;euclidean;None;Euclidiana;50;3;4;17859.098514373014;0.0;0.37609100170153315;5.551115123125783e-17
+daytime;euclidean;None;Euclidiana;50;3;5;14012.11841599567;1.8189894035458565e-12;0.3258564876750833;0.0
+daytime;euclidean;None;Euclidiana;50;5;2;43027.062270185124;0.0;0.4399219943655807;0.0
+daytime;euclidean;None;Euclidiana;50;5;3;26219.898600689674;20.745836910383147;0.3808040498990217;0.002679650171626411
+daytime;euclidean;None;Euclidiana;50;5;4;17859.098514373014;0.0;0.37609100170153315;5.551115123125783e-17
+daytime;euclidean;None;Euclidiana;50;5;5;14012.11841599567;1.8189894035458565e-12;0.3258564876750833;0.0
+daytime;dtw;None;DTW (sin restricción);20;3;2;10412.887985786603;128.82413569466235;0.316279462287453;0.006951855882432557
+daytime;dtw;None;DTW (sin restricción);20;3;3;8923.36172475022;270.81589050974134;0.2438871639941987;0.04807910512356816
+daytime;dtw;None;DTW (sin restricción);20;3;4;7303.137532042849;191.47117966037013;0.22197488007772612;0.02505783532101913
+daytime;dtw;None;DTW (sin restricción);20;3;5;6569.455297773814;239.38182293773812;0.18159038267280017;0.033629313530871535
+daytime;dtw;None;DTW (sin restricción);20;5;2;10275.648076465002;57.34554587617195;0.3260574850726324;0.003201473161286055
