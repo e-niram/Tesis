@@ -3,7 +3,7 @@
 and append it to data/final/daytime_final.csv & nighttime_final.csv.
 
 Called daily by the GitHub Actions pipeline (after midnight Madrid time).
-Fetches data for the previous calendar day by default.
+Downloads the full CSV and reads the last available day by default.
 
 API reference:
   https://datos.madrid.es/api/3/action/datastore_search
@@ -17,14 +17,15 @@ Data format differences vs data/final/:
   - Separate Año/mes/dia columns  → merged to FECHA (ISO date)
   - Comma decimal separator       → dot decimal
   - Long format (one row per station-period) → wide (stations as columns)
-  - LAeqDiurno = energy-mean of tipo D and tipo E
-  - LAeqNocturno = tipo N directly
+  - LAeqDiurno = tipo D Laeq directly
+  - LAeqNocturno = tipo N Laeq directly
   - Missing stations → seasonal imputation (same logic as 03_handle_missing.py)
 """
 
 import argparse
 import sys
 from datetime import date, timedelta
+from io import StringIO
 from pathlib import Path
 
 import numpy as np
@@ -37,10 +38,10 @@ FINAL_DIR  = REPO_ROOT / "data" / "final"
 DAYTIME_F  = FINAL_DIR / "daytime_final.csv"
 NIGHTTIME_F = FINAL_DIR / "nighttime_final.csv"
 
-# ── API constants ──────────────────────────────────────────────────────────────
-API_URL     = "https://datos.madrid.es/api/3/action/datastore_search"
+# ── Source constants ───────────────────────────────────────────────────────────
 RESOURCE_ID = "215885-0-contaminacion-ruido"
-API_LIMIT   = 5000  # max records per request — more than enough for one day (~90 rows)
+# The CKAN datastore API is frozen (last updated Feb 2026); the CSV is the authoritative source.
+CSV_URL = f"https://datos.madrid.es/egob/catalogo/{RESOURCE_ID}.csv"
 
 # Valid station IDs (the 31 stations present in data/final/)
 VALID_STATIONS = {
@@ -61,52 +62,74 @@ def pressure_to_db(p: float | np.ndarray) -> float | np.ndarray:
     return 20 * np.log10(np.where(p > 0, p, 1e-12))
 
 
-# ── API fetch ──────────────────────────────────────────────────────────────────
+# ── CSV fetch ──────────────────────────────────────────────────────────────────
 
-def fetch_day(target_date: date) -> pd.DataFrame:
+def _download_csv() -> tuple[pd.DataFrame, str]:
     """
-    Fetch all records for *target_date* from the CKAN API.
-    Returns a raw DataFrame with original API columns.
-    Raises RuntimeError if the API is unreachable, returns an error, or has no data.
+    Download the full CSV and return (DataFrame, year_col_name).
+    Raises RuntimeError on network or parse errors.
     """
-    # The year field was renamed from "Año" to "Ano" (no accent) in the CKAN schema.
-    # Using "Año" causes HTTP 409; "Ano" works correctly.
-    filters = (
-        f'{{"Ano":"{target_date.year}",'
-        f'"mes":"{target_date.month}",'
-        f'"dia":"{target_date.day}"}}'
-    )
-    params = {
-        "resource_id": RESOURCE_ID,
-        "limit": API_LIMIT,
-        "filters": filters,
-    }
     try:
-        resp = requests.get(API_URL, params=params, timeout=30)
+        resp = requests.get(CSV_URL, timeout=60)
         resp.raise_for_status()
     except requests.exceptions.ConnectionError as exc:
-        raise RuntimeError(f"Could not connect to API: {exc}") from exc
+        raise RuntimeError(f"Could not connect to portal: {exc}") from exc
     except requests.exceptions.Timeout as exc:
-        raise RuntimeError(f"API request timed out after 30 s: {exc}") from exc
+        raise RuntimeError(f"CSV download timed out: {exc}") from exc
     except requests.exceptions.HTTPError as exc:
-        raise RuntimeError(f"API returned HTTP error: {exc}") from exc
+        raise RuntimeError(f"Portal returned HTTP error: {exc}") from exc
 
     try:
-        result = resp.json()
-    except ValueError as exc:
-        raise RuntimeError(f"API response is not valid JSON: {exc}") from exc
+        df = pd.read_csv(StringIO(resp.text), sep=";", dtype=str)
+    except Exception as exc:
+        raise RuntimeError(f"Failed to parse CSV: {exc}") from exc
 
-    if not result.get("success"):
-        raise RuntimeError(f"API returned success=false: {result}")
+    df.columns = [c.strip() for c in df.columns]
 
-    records = result["result"]["records"]
-    if not records:
+    # The year column has been published as both "Año" and "Ano"
+    year_col = next(
+        (c for c in df.columns if c.strip().lower() in ("año", "ano", "anio", "year")),
+        None,
+    )
+    if year_col is None:
+        raise RuntimeError(f"Year column not found in CSV. Columns: {list(df.columns)}")
+
+    return df, year_col
+
+
+def fetch_last_day(target_date: date | None = None) -> tuple[pd.DataFrame, date]:
+    """
+    Download the full CSV and return (day_df, resolved_date).
+
+    If *target_date* is given, filter to that date.
+    Otherwise, use the last (most recent) date present in the CSV — robust
+    against the portal publishing data later than expected.
+
+    Raises RuntimeError when no records are found for the resolved date.
+    """
+    df, year_col = _download_csv()
+
+    df["_date"] = pd.to_datetime({
+        "year":  df[year_col].str.strip(),
+        "month": df["mes"].str.strip(),
+        "day":   df["dia"].str.strip(),
+    }, errors="coerce")
+
+    if target_date is None:
+        resolved = df["_date"].max()
+        if pd.isna(resolved):
+            raise RuntimeError("Could not parse any dates from the CSV.")
+        target_date = resolved.date()
+
+    day_df = df[df["_date"].dt.date == target_date].drop(columns=["_date"])
+
+    if day_df.empty:
         raise RuntimeError(
-            f"No records found for {target_date} in resource {RESOURCE_ID}. "
-            "The API may not have published data for this date yet."
+            f"No records found for {target_date} in the published CSV. "
+            "The portal may not have published data for this date yet."
         )
 
-    return pd.DataFrame(records)
+    return day_df, target_date
 
 
 # ── Cleaning ───────────────────────────────────────────────────────────────────
@@ -126,9 +149,9 @@ def clean_raw(raw: pd.DataFrame, target_date: date) -> dict[str, pd.Series]:
     df["NMT"] = pd.to_numeric(df["NMT"], errors="coerce").astype("Int64")
     df = df[df["NMT"].isin(VALID_STATIONS) & ~df["NMT"].isin(EXCLUDED_STATIONS)].copy()
 
-    # Period type
+    # Period type — only D (daytime) and N (nighttime); E is not used
     df["tipo"] = df["tipo"].str.strip().str.upper()
-    df = df[df["tipo"].isin({"D", "E", "N"})].copy()
+    df = df[df["tipo"].isin({"D", "N"})].copy()
 
     # LAeq: comma decimal → float
     df["LAeq"] = (
@@ -140,13 +163,12 @@ def clean_raw(raw: pd.DataFrame, target_date: date) -> dict[str, pd.Series]:
     df["LAeq"] = pd.to_numeric(df["LAeq"], errors="coerce")
     df = df.dropna(subset=["NMT", "LAeq"])
 
-    # --- Daytime: energy mean of tipo D and tipo E --------------------------
+    # --- Daytime: tipo D, Laeq directly -------------------------------------
     day_vals: dict[int, float] = {}
-    for nmt, grp in df[df["tipo"].isin({"D", "E"})].groupby("NMT"):
-        pressures = db_to_pressure(grp["LAeq"].to_numpy(dtype=float))
-        day_vals[int(nmt)] = float(pressure_to_db(pressures.mean()))
+    for nmt, grp in df[df["tipo"] == "D"].groupby("NMT"):
+        day_vals[int(nmt)] = float(grp["LAeq"].mean())
 
-    # --- Nighttime: tipo N directly -----------------------------------------
+    # --- Nighttime: tipo N, Laeq directly -----------------------------------
     night_vals: dict[int, float] = {}
     for nmt, grp in df[df["tipo"] == "N"].groupby("NMT"):
         night_vals[int(nmt)] = float(grp["LAeq"].mean())
@@ -243,17 +265,16 @@ def append_to_final(
 # ── Entry point ────────────────────────────────────────────────────────────────
 
 def main(target_date: date | None = None) -> None:
-    if target_date is None:
-        target_date = date.today() - timedelta(days=1)
-
-    print(f"Fetching data for {target_date} …")
+    hint = str(target_date) if target_date else "last available day in CSV"
+    print(f"Fetching data for {hint} …")
     try:
-        raw = fetch_day(target_date)
+        raw, target_date = fetch_last_day(target_date)
     except RuntimeError as exc:
         print(f"WARNING: {exc}")
         print("Skipping append — no data available yet for this date.")
         sys.exit(0)
 
+    print(f"Resolved date: {target_date}")
     cleaned = clean_raw(raw, target_date)
 
     FINAL_DIR.mkdir(parents=True, exist_ok=True)
@@ -269,7 +290,7 @@ if __name__ == "__main__":
         "--date",
         type=date.fromisoformat,
         default=None,
-        help="ISO date to fetch (YYYY-MM-DD). Defaults to yesterday.",
+        help="ISO date to fetch (YYYY-MM-DD). Defaults to last available day in the CSV.",
     )
     args = parser.parse_args()
     main(args.date)
