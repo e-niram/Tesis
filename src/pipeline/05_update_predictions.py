@@ -201,7 +201,7 @@ def build_predictions_json() -> dict:
             col = str(sid)
             series = df[col].to_numpy(dtype=float) if col in df.columns else np.array([])
 
-            print(f"  {name:<30} {period} …")
+            print(f"  {name:<30} {period}…")
             row[key] = forecast_station(series, last_date)
 
         station_list.append(row)

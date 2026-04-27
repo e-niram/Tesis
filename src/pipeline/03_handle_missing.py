@@ -1,4 +1,8 @@
 import os
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -29,24 +33,13 @@ def load_and_prepare_dataset(file_path):
     return df
 
 def synchronize_timeline(df):
-    """Inserts rows for missing dates to ensure a continuous daily index, excluding 2026."""
-    # 1. Define the initial range
+    """Inserts rows for missing dates to ensure a continuous daily index."""
     start_date = df['FECHA'].min()
     end_date = df['FECHA'].max()
-    
-    # 2. Force the end_date to not exceed the last day of 2025
-    limit_date = pd.Timestamp('2025-12-31')
-    if end_date > limit_date:
-        end_date = limit_date
-        print(f"Timeline Clip: Data restricted to end at {limit_date.date()}")
 
     full_range = pd.date_range(start=start_date, end=end_date, freq='D')
-    
-    # 3. Filter the original dataframe to remove any 2026 rows before reindexing
-    df = df[df['FECHA'] <= limit_date]
+
     df = df.set_index('FECHA')
-    
-    # 4. Reindex to the cleaned range
     df_sync = df.reindex(full_range)
     df_sync.index.name = 'FECHA'
     

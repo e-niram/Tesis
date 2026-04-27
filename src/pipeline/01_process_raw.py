@@ -111,10 +111,10 @@ import pandas as pd
 
 # Cargar el archivo CSV
 df = pd.read_csv(
-    "data/raw/ruidoFull.csv", 
-    delimiter=";", 
-    decimal=",", 
-    encoding="latin-1", 
+    "data/raw/ruido.csv",
+    delimiter=";",
+    decimal=",",
+    encoding="utf-8",
     on_bad_lines='warn'
 )
 clean_data(df)
