@@ -135,8 +135,6 @@ function updateMapMarkers(stations, period, dayIndex) {
         if (e.type === 'keypress' && e.originalEvent.key !== 'Enter') return;
         _selectedId = station.id;
         _onStationClick(station);
-        // Refresh all marker icons to reflect new selection
-        updateMapMarkers(stations, period, dayIndex);
       });
 
       marker.addTo(_map);

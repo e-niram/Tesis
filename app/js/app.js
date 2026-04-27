@@ -157,6 +157,7 @@ function showStationDetail(station) {
   applyNoiseColor(DOM.statMax, vals.length ? Math.max(...vals) : null);
   applyNoiseColor(DOM.statMin, vals.length ? Math.min(...vals) : null);
   show(DOM.stationStats);
+  refreshMap();
 }
 
 /* ── Map + labels refresh ───────────────────────────────────────────────── */
