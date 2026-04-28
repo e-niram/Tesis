@@ -1,0 +1,17 @@
+period;metric;metric_params;config_label;max_iter;n_init;n_clusters;mean_inertia;std_inertia;mean_silhouette;std_silhouette
+nighttime;euclidean;None;Euclidiana;20;5;3;30350.754021245404;0.0;0.37412418945688114;0.0
+nighttime;euclidean;None;Euclidiana;50;5;3;30350.754021245404;0.0;0.37412418945688114;0.0
+nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 201};DTW Sakoe-Chiba r=201;20;5;3;8581.481220903222;0.0;0.4213635517020585;0.0
+nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 201};DTW Sakoe-Chiba r=201;50;5;3;8581.481220903222;0.0;0.4213635517020585;0.0
+nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 402};DTW Sakoe-Chiba r=402;20;5;3;8301.987061467684;0.0;0.36821022056881675;0.0
+nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 402};DTW Sakoe-Chiba r=402;50;5;3;8301.987061467684;0.0;0.36821022056881675;0.0
+nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 803};DTW Sakoe-Chiba r=803;20;5;3;8111.143147818384;0.0;0.3425649624520293;0.0
+nighttime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 803};DTW Sakoe-Chiba r=803;50;5;3;8111.143147818384;0.0;0.3425649624520293;0.0
+daytime;euclidean;None;Euclidiana;20;5;3;26205.229078728953;0.0;0.38269884870658644;0.0
+daytime;euclidean;None;Euclidiana;50;5;3;26205.229078728953;0.0;0.38269884870658644;0.0
+daytime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 201};DTW Sakoe-Chiba r=201;20;5;3;8376.902098950288;0.0;0.3126361506024978;0.0
+daytime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 201};DTW Sakoe-Chiba r=201;50;5;3;8376.902098950288;0.0;0.3126361506024978;0.0
+daytime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 402};DTW Sakoe-Chiba r=402;20;5;3;8285.282379153317;0.0;0.27904181823474516;0.0
+daytime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 402};DTW Sakoe-Chiba r=402;50;5;3;8285.282379153317;0.0;0.27904181823474516;0.0
+daytime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 803};DTW Sakoe-Chiba r=803;20;5;3;8443.78439919718;0.0;0.27573349928723656;0.0
+daytime;dtw;{'global_constraint': 'sakoe_chiba', 'sakoe_chiba_radius': 803};DTW Sakoe-Chiba r=803;50;5;3;8443.78439919718;0.0;0.27573349928723656;0.0
