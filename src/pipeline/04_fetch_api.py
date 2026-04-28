@@ -41,7 +41,7 @@ NIGHTTIME_F = FINAL_DIR / "nighttime_final.csv"
 # ── Source constants ───────────────────────────────────────────────────────────
 RESOURCE_ID = "215885-0-contaminacion-ruido"
 # The CKAN datastore API is frozen (last updated Feb 2026); the CSV is the authoritative source.
-CSV_URL = f"https://datos.madrid.es/egob/catalogo/{RESOURCE_ID}.csv"
+CSV_URL = f"https://datos.madrid.es/dataset/215885-0-contaminacion-ruido/resource/215885-0-contaminacion-ruido/download/215885-0-contaminacion-ruido.csv"
 
 # Valid station IDs (the 31 stations present in data/final/)
 VALID_STATIONS = {
@@ -257,6 +257,7 @@ def append_to_final(
     new_row = impute_missing_stations(new_row, recent, target_date)
 
     df = pd.concat([df, new_row.to_frame().T])
+    df.index.name = "FECHA"
     df.to_csv(csv_path, sep=";")
     print(f"  {csv_path.name}: appended {date_str}.")
     return True
