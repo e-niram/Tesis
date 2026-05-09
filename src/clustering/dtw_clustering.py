@@ -14,18 +14,19 @@ from sklearn.metrics import silhouette_score
 warnings.filterwarnings('ignore')
 
 # ── Directories ───────────────────────────────────────────────────────────────
-BASE_DIR    = 'results/clustering/test'
-PLOTS_DIR   = os.path.join(BASE_DIR, 'plots')
-METRICS_DIR = os.path.join(BASE_DIR, 'metrics')
-TUNING_DIR  = os.path.join(BASE_DIR, 'tuning')
+BASE_DIR       = 'results/clustering/test'
+PLOTS_DIR      = os.path.join(BASE_DIR, 'plots')
+METRICS_DIR    = os.path.join(BASE_DIR, 'metrics')
+TUNING_DIR     = os.path.join(BASE_DIR, 'tuning')
+GROUPINGS_DIR  = os.path.join(BASE_DIR, 'groupings')
 CHECKPOINT_FILE = os.path.join(METRICS_DIR, 'Tuning_All.csv')
 
-for _d in [PLOTS_DIR, METRICS_DIR, TUNING_DIR]:
+for _d in [PLOTS_DIR, METRICS_DIR, TUNING_DIR, GROUPINGS_DIR]:
     os.makedirs(_d, exist_ok=True)
 
 # ── Static parameter grid ─────────────────────────────────────────────────────
 N_CLUSTERS_LIST   = [2, 3, 4, 5]
-MAX_ITER_LIST     = [20, 50]
+MAX_ITER_LIST     = [20]
 N_INIT_LIST       = [5]
 TUNING_SEEDS      = [42, 43, 44]
 
@@ -149,19 +150,26 @@ def build_dtw_dist_matrix(X_3d: np.ndarray, mp: Optional[dict]) -> np.ndarray:
 
 # ── Tuning ────────────────────────────────────────────────────────────────────
 
-def _load_period_data(period: str) -> tuple[np.ndarray, np.ndarray, int]:
+def _load_period_data(period: str) -> tuple[np.ndarray, np.ndarray, int, list]:
     df = pd.read_csv(f'data/test/{period}_final_test.csv', sep=';')
     df['FECHA'] = pd.to_datetime(df['FECHA'])
     df_num = df.select_dtypes(include='number')
     X_2d = df_num.T.values
     X_3d = X_2d.reshape(*X_2d.shape, 1)
-    return X_2d, X_3d, X_2d.shape[1]
+    return X_2d, X_3d, X_2d.shape[1], df_num.columns.tolist()
+
+
+def _grouping_path(period: str, lbl: str, k: int, seed: int) -> str:
+    slug = lbl.replace(' ', '_').replace('=', '')
+    return os.path.join(GROUPINGS_DIR, f"{period}_{slug}_k{k}_seed{seed}.csv")
 
 
 def _fit_config(X_2d: np.ndarray, X_3d: np.ndarray,
                 metric: str, mp: Optional[dict],
                 dist_matrix: Optional[np.ndarray],
-                max_iter: int, n_init: int, k: int) -> tuple[float, float, float, float]:
+                max_iter: int, n_init: int, k: int,
+                period: str, lbl: str,
+                station_ids: list) -> tuple[float, float, float, float]:
     """Run one (metric, max_iter, n_init, k) combo over all seeds; return mean/std stats."""
     inertias, sils = [], []
     for seed in TUNING_SEEDS:
@@ -180,6 +188,8 @@ def _fit_config(X_2d: np.ndarray, X_3d: np.ndarray,
         y_pred = model.fit_predict(X_3d)
         inertias.append(model.inertia_)
         sils.append(compute_silhouette(X_2d, y_pred, metric, dist_matrix))
+        (pd.DataFrame({'Station_ID': station_ids, 'Cluster': y_pred})
+           .to_csv(_grouping_path(period, lbl, k, seed), index=False, sep=';'))
     return (float(np.mean(inertias)), float(np.std(inertias)),
             float(np.nanmean(sils)), float(np.nanstd(sils)))
 
@@ -189,7 +199,7 @@ def run_tuning_period(period: str, done_keys: set) -> None:
     _log(f"{'='*60}")
     _log(f"PERIOD: {period}")
     _log(f"{'='*60}")
-    X_2d, X_3d, n_timesteps = _load_period_data(period)
+    X_2d, X_3d, n_timesteps, station_ids = _load_period_data(period)
     configs = build_configs(n_timesteps)
 
     n_total = (len(configs) * len(MAX_ITER_LIST) * len(N_INIT_LIST) * len(N_CLUSTERS_LIST))
@@ -227,7 +237,8 @@ def run_tuning_period(period: str, done_keys: set) -> None:
         for max_iter, n_init, k in pending:
             t0 = time.monotonic()
             mi_mean, mi_std, sil_mean, sil_std = _fit_config(
-                X_2d, X_3d, metric, mp, dist_matrix, max_iter, n_init, k)
+                X_2d, X_3d, metric, mp, dist_matrix, max_iter, n_init, k,
+                period, lbl, station_ids)
             elapsed = time.monotonic() - t0
             record = dict(
                 period=period,
@@ -280,7 +291,7 @@ def plot_config_comparison(tuning_df: pd.DataFrame, period: str) -> None:
     period_label = PERIOD_LABELS[period]
     pdf = tuning_df[tuning_df['period'] == period]
 
-    _, _, n_ts = _load_period_data(period)
+    _, _, n_ts, _ = _load_period_data(period)
     period_configs   = build_configs(n_ts)
     period_color_map = build_color_map(period_configs)
 
