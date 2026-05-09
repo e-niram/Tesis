@@ -156,6 +156,7 @@ def build_dtw_dist_matrix(X_3d: np.ndarray, mp: Optional[dict]) -> np.ndarray:
 def _load_period_data(period: str) -> tuple[np.ndarray, np.ndarray, int, list]:
     df = pd.read_csv(os.path.join(DATA_DIR, f'{period}_final.csv'), sep=';')
     df['FECHA'] = pd.to_datetime(df['FECHA'])
+    df = df[df['FECHA'] <= '2025-12-31']
     df_num = df.select_dtypes(include='number')
     X_2d = df_num.T.values
     X_3d = X_2d.reshape(*X_2d.shape, 1)
