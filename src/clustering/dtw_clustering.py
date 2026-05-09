@@ -1,7 +1,6 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
 import os
 import time
 import warnings
@@ -15,22 +14,20 @@ from sklearn.metrics import silhouette_score
 warnings.filterwarnings('ignore')
 
 # ── Directories ───────────────────────────────────────────────────────────────
-BASE_DIR    = 'results/clustering'
+BASE_DIR    = 'results/clustering/test'
 PLOTS_DIR   = os.path.join(BASE_DIR, 'plots')
 METRICS_DIR = os.path.join(BASE_DIR, 'metrics')
 TUNING_DIR  = os.path.join(BASE_DIR, 'tuning')
-CHECKPOINT_FILE = os.path.join(METRICS_DIR, 'Tuning_All_K3.csv')
+CHECKPOINT_FILE = os.path.join(METRICS_DIR, 'Tuning_All.csv')
 
 for _d in [PLOTS_DIR, METRICS_DIR, TUNING_DIR]:
     os.makedirs(_d, exist_ok=True)
 
 # ── Static parameter grid ─────────────────────────────────────────────────────
-N_CLUSTERS_LIST   = [3]
+N_CLUSTERS_LIST   = [2, 3, 4, 5]
 MAX_ITER_LIST     = [20, 50]
 N_INIT_LIST       = [5]
-TUNING_SEEDS      = [42]
-PRODUCTION_SEED   = 42    # fixed for reproducibility
-PRODUCTION_N_INIT = 10    # best of 10 random initializations
+TUNING_SEEDS      = [42, 43, 44]
 
 PERIODS       = ['nighttime', 'daytime']
 PERIOD_LABELS = {'nighttime': 'Nocturno', 'daytime': 'Diurno'}
@@ -153,7 +150,7 @@ def build_dtw_dist_matrix(X_3d: np.ndarray, mp: Optional[dict]) -> np.ndarray:
 # ── Tuning ────────────────────────────────────────────────────────────────────
 
 def _load_period_data(period: str) -> tuple[np.ndarray, np.ndarray, int]:
-    df = pd.read_csv(f'data/final/{period}_final.csv', sep=';')
+    df = pd.read_csv(f'data/test/{period}_final_test.csv', sep=';')
     df['FECHA'] = pd.to_datetime(df['FECHA'])
     df_num = df.select_dtypes(include='number')
     X_2d = df_num.T.values
@@ -406,80 +403,6 @@ def select_best_params(tuning_df: pd.DataFrame) -> dict[str, pd.Series]:
         print(f"    inertia      : {best['mean_inertia']:.2f}")
     return best_per_period
 
-# ── Production run ────────────────────────────────────────────────────────────
-
-def run_production_period(period: str, best: pd.Series) -> dict:
-    """Fit the final model for one period using best params; save assignments and plot."""
-    print(f"\n  Period: {period}")
-
-    df = pd.read_csv(f'data/final/{period}_final.csv', sep=';')
-    df['FECHA'] = pd.to_datetime(df['FECHA'])
-    dates       = df['FECHA']
-    df_num      = df.select_dtypes(include='number')
-    station_ids = df_num.columns.tolist()
-    X_2d = df_num.T.values
-    X_3d = X_2d.reshape(*X_2d.shape, 1)
-
-    label_map  = build_label_map(build_configs(X_2d.shape[1]))
-    metric, mp = label_map[best['config_label']]
-    k          = int(best['n_clusters'])
-    max_iter   = int(best['max_iter'])
-    run_id     = f"{period}_k{k}"
-
-    fit_kwargs = dict(
-        n_clusters=k,
-        metric=metric,
-        max_iter=max_iter,
-        n_init=PRODUCTION_N_INIT,
-        random_state=PRODUCTION_SEED,
-        n_jobs=-1,
-        dtw_inertia=(metric == 'dtw'),
-    )
-    if metric == 'dtw' and mp is not None:
-        fit_kwargs['metric_params'] = mp
-
-    model  = TimeSeriesKMeans(**fit_kwargs)
-    labels = model.fit_predict(X_3d)
-
-    (pd.DataFrame({'Station_ID': station_ids, 'Cluster': labels})
-       .to_csv(f"{METRICS_DIR}/Results_{run_id}.csv", index=False, sep=';'))
-
-    fig, axes = plt.subplots(k, 1, figsize=(10, 4 * k), sharex=True)
-    if k == 1:
-        axes = [axes]
-
-    for i in range(k):
-        ax             = axes[i]
-        cluster_series = X_3d[labels == i, :, 0]
-        for series in cluster_series:
-            ax.plot(dates, series, color='grey', alpha=0.2)
-        ax.plot(dates, model.cluster_centers_[i].ravel(), color='red', linewidth=2)
-        ax.set_title(f'Clúster {i} — {len(cluster_series)} estaciones')
-        ax.set_ylabel('Decibeles (dB)')
-        ax.set_ylim([30, 105])
-        ax.xaxis.set_major_locator(mdates.AutoDateLocator())
-        ax.xaxis.set_major_formatter(mdates.DateFormatter('%b %Y'))
-        ax.grid(True, alpha=0.1)
-
-    plt.xticks(rotation=45)
-    plt.tight_layout()
-    plt.savefig(f"{PLOTS_DIR}/Plot_{run_id}.png")
-    plt.close()
-
-    print(f"  inertia={model.inertia_:.1f}")
-    return {'Period': period, 'K': k, 'Seed': PRODUCTION_SEED,
-            'NInit': PRODUCTION_N_INIT, 'Inertia': model.inertia_}
-
-
-def run_production(tuning_df: pd.DataFrame) -> None:
-    """Select best params and run one production fit per period; save inertia summary."""
-    best_per_period = select_best_params(tuning_df)
-    print(f"\n{'='*60}\nProduction run "
-          f"(seed={PRODUCTION_SEED}, n_init={PRODUCTION_N_INIT})\n{'='*60}")
-    inertia_records = [run_production_period(p, best_per_period[p]) for p in PERIODS]
-    (pd.DataFrame(inertia_records)
-       .to_csv(f"{METRICS_DIR}/Inertia_Summary.csv", index=False, sep=';'))
-
 # ── LaTeX table ───────────────────────────────────────────────────────────────
 
 def _escape_latex(text: str) -> str:
@@ -706,6 +629,6 @@ def print_latex_table(tuning_df: pd.DataFrame) -> None:
 if __name__ == '__main__':
     tuning_df = run_tuning()
     run_plots(tuning_df)
-    run_production(tuning_df)
+    select_best_params(tuning_df)
     print_latex_table(tuning_df)
     print("\nProcess finished.")
