@@ -14,7 +14,8 @@ from sklearn.metrics import silhouette_score
 warnings.filterwarnings('ignore')
 
 # ── Directories ───────────────────────────────────────────────────────────────
-BASE_DIR       = 'results/clustering/test'
+DATA_DIR       = 'data/final'
+BASE_DIR       = 'results/clustering/final'
 PLOTS_DIR      = os.path.join(BASE_DIR, 'plots')
 METRICS_DIR    = os.path.join(BASE_DIR, 'metrics')
 TUNING_DIR     = os.path.join(BASE_DIR, 'tuning')
@@ -76,18 +77,19 @@ def _save_record(record: dict) -> None:
 
 def build_configs(n_timesteps: int) -> list[tuple]:
     """
-    Return all (metric, metric_params) combinations for the given series length.
+    Return all (metric, metric_params, frac) combinations for the given series length.
     Sakoe-Chiba radii are derived from n_timesteps so the band scales with the data.
+    frac is None for euclidean; the SC fraction for DTW configs.
     """
-    configs = [('euclidean', None)]
+    configs = [('euclidean', None, None)]
     for frac in SC_FRACTIONS:
         r = max(1, round(frac * n_timesteps))
         configs.append(('dtw', {'global_constraint': 'sakoe_chiba',
-                                'sakoe_chiba_radius': r}))
+                                'sakoe_chiba_radius': r}, frac))
     return configs
 
 
-def config_label(metric: str, mp: Optional[dict]) -> str:
+def config_label(metric: str, mp: Optional[dict], frac: Optional[float] = None) -> str:
     """Human-readable (Spanish) label for a metric configuration."""
     if metric == 'euclidean':
         return 'Euclidiana'
@@ -95,19 +97,20 @@ def config_label(metric: str, mp: Optional[dict]) -> str:
         return 'DTW (sin restricción)'
     gc = mp.get('global_constraint', '')
     if gc == 'sakoe_chiba':
-        return f"DTW Sakoe-Chiba r={mp['sakoe_chiba_radius']}"
+        pct = f"{int(frac * 100)}%" if frac is not None else str(mp['sakoe_chiba_radius'])
+        return f"DTW Sakoe-Chiba r={pct}"
     return f'DTW ({gc})'
 
 
 def build_label_map(configs: list[tuple]) -> dict:
     """Map each config_label string back to its (metric, metric_params) tuple."""
-    return {config_label(m, mp): (m, mp) for m, mp in configs}
+    return {config_label(m, mp, frac): (m, mp) for m, mp, frac in configs}
 
 
 def build_color_map(configs: list[tuple]) -> dict:
     """Assign a stable color to each config label."""
     palette = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b']
-    labels  = [config_label(m, mp) for m, mp in configs]
+    labels  = [config_label(m, mp, frac) for m, mp, frac in configs]
     return {lbl: palette[i % len(palette)] for i, lbl in enumerate(labels)}
 
 # ── Silhouette helper ─────────────────────────────────────────────────────────
@@ -151,7 +154,7 @@ def build_dtw_dist_matrix(X_3d: np.ndarray, mp: Optional[dict]) -> np.ndarray:
 # ── Tuning ────────────────────────────────────────────────────────────────────
 
 def _load_period_data(period: str) -> tuple[np.ndarray, np.ndarray, int, list]:
-    df = pd.read_csv(f'data/test/{period}_final_test.csv', sep=';')
+    df = pd.read_csv(os.path.join(DATA_DIR, f'{period}_final.csv'), sep=';')
     df['FECHA'] = pd.to_datetime(df['FECHA'])
     df_num = df.select_dtypes(include='number')
     X_2d = df_num.T.values
@@ -160,7 +163,7 @@ def _load_period_data(period: str) -> tuple[np.ndarray, np.ndarray, int, list]:
 
 
 def _grouping_path(period: str, lbl: str, k: int, seed: int) -> str:
-    slug = lbl.replace(' ', '_').replace('=', '')
+    slug = lbl.replace(' ', '_').replace('=', '').replace('%', 'pct')
     return os.path.join(GROUPINGS_DIR, f"{period}_{slug}_k{k}_seed{seed}.csv")
 
 
@@ -204,17 +207,17 @@ def run_tuning_period(period: str, done_keys: set) -> None:
 
     n_total = (len(configs) * len(MAX_ITER_LIST) * len(N_INIT_LIST) * len(N_CLUSTERS_LIST))
     n_done  = sum(
-        1 for metric, mp in configs
+        1 for metric, mp, frac in configs
         for max_iter, n_init, k in iterproduct(MAX_ITER_LIST, N_INIT_LIST, N_CLUSTERS_LIST)
-        if (period, config_label(metric, mp), max_iter, n_init, k) in done_keys
+        if (period, config_label(metric, mp, frac), max_iter, n_init, k) in done_keys
     )
     _log(f"  Series length : {n_timesteps} time steps")
     _log(f"  SC radii      : {[round(f * n_timesteps) for f in SC_FRACTIONS]}"
          f"  (= {[f'{int(f*100)}%' for f in SC_FRACTIONS]} of N)")
     _log(f"  Combos        : {n_done}/{n_total} already done, {n_total - n_done} remaining\n")
 
-    for metric, mp in configs:
-        lbl = config_label(metric, mp)
+    for metric, mp, frac in configs:
+        lbl = config_label(metric, mp, frac)
 
         pending = [
             (max_iter, n_init, k)
