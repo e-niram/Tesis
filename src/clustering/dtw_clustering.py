@@ -9,7 +9,7 @@ from datetime import datetime
 from itertools import product as iterproduct
 from typing import Optional
 from tslearn.clustering import TimeSeriesKMeans
-from tslearn.metrics import cdist_dtw
+from dtaidistance import dtw as dtaidtw
 from sklearn.metrics import silhouette_score
 
 warnings.filterwarnings('ignore')
@@ -142,11 +142,13 @@ def build_dtw_dist_matrix(X_3d: np.ndarray, mp: Optional[dict]) -> np.ndarray:
     This is independent of k, n_init, max_iter, and seed, so it should be
     computed once and reused across all inner loop iterations.
     """
-    kw: dict = {}
+    X_2d = X_3d[:, :, 0]
+    window = None
     if mp is not None and mp.get('global_constraint') == 'sakoe_chiba':
-        kw = {'global_constraint': 'sakoe_chiba',
-              'sakoe_chiba_radius': mp['sakoe_chiba_radius']}
-    return cdist_dtw(X_3d, **kw)
+        window = mp['sakoe_chiba_radius']
+    matrix = dtaidtw.distance_matrix_fast(X_2d, window=window, parallel=True)
+    matrix += matrix.T  # dtaidistance fills only the lower triangle; mirror for sklearn
+    return matrix
 
 # ── Tuning ────────────────────────────────────────────────────────────────────
 
