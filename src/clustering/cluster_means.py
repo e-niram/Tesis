@@ -5,8 +5,8 @@ import os
 
 # Fill in the mapping file for each period
 MAPPING_FILES = {
-    'nighttime': 'results/clustering/metrics/Results_nighttime_k3_s47.csv',
-    'daytime':   'results/clustering/metrics/Results_daytime_k3_s48.csv',
+    'nighttime': 'results/clustering/final/groupings/nighttime_DTW_Sakoe-Chiba_r5pct_k3_seed42.csv',
+    'daytime':   'results/clustering/final/groupings/daytime_DTW_Sakoe-Chiba_r5pct_k3_seed42.csv',
 }
 
 NOISE_LABELS = {
@@ -23,9 +23,9 @@ def pressure_to_db(p):
 
 def calculate_cluster_means(period, mapping_path):
     data_path  = f'data/final/{period}_final.csv'
-    output_csv = f'results/clustering/metrics/Cluster_Means_{period}.csv'
-    img_individual  = f'results/clustering/plots/cluster_{period}_profiles_individuales.png'
-    img_comparativo = f'results/clustering/plots/cluster_{period}_profiles_superpuesto.png'
+    output_csv = f'results/clustering/final/metrics/Cluster_Means_{period}.csv'
+    img_individual  = f'results/clustering/final/plots/cluster_{period}_profiles_individuales.png'
+    img_comparativo = f'results/clustering/final/plots/cluster_{period}_profiles_superpuesto.png'
 
     # Load data
     mapping = pd.read_csv(mapping_path, sep=';')
@@ -34,6 +34,7 @@ def calculate_cluster_means(period, mapping_path):
     df_data = pd.read_csv(data_path, sep=';')
     df_data['FECHA'] = pd.to_datetime(df_data['FECHA'])
     df_data.set_index('FECHA', inplace=True)
+    df_data = df_data[df_data.index <= '2025-12-31']
 
     # Calculate cluster means
     clusters = sorted(mapping['Cluster'].unique())
@@ -92,7 +93,7 @@ def calculate_cluster_means(period, mapping_path):
 
     ax2.set_ylim(35, 80)
     period_label = 'Nocturno' if period == 'nighttime' else 'Diurno'
-    ax2.set_title(f'Comparativa de Perfiles Medios por Cluster (Ruido {period_label})', fontsize=16, fontweight='bold')
+    ax2.set_title(f'Comparativa de nivel medio por clúster (Período {period_label})', fontsize=16, fontweight='bold')
     ax2.set_ylabel('Nivel Sonoro (dB)')
     ax2.set_xlabel('Fecha')
     ax2.grid(True, linestyle='-', alpha=0.3)
