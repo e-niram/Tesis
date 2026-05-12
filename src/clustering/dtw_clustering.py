@@ -290,10 +290,13 @@ def _mark_best(ax, xs, ys, color):
                color=color, edgecolors='black', linewidth=0.8)
 
 
-def plot_config_comparison(tuning_df: pd.DataFrame, period: str) -> None:
+def plot_config_comparison(tuning_df: pd.DataFrame, period: str,
+                           exclude_labels: list[str] | None = None) -> None:
     """Plot elbow + silhouette curves grouped by distance config for one period."""
     period_label = PERIOD_LABELS[period]
     pdf = tuning_df[tuning_df['period'] == period]
+    if exclude_labels:
+        pdf = pdf[~pdf['config_label'].isin(exclude_labels)]
 
     _, _, n_ts, _ = _load_period_data(period)
     period_configs   = build_configs(n_ts)
@@ -393,10 +396,11 @@ def plot_convergence_sensitivity(tuning_df: pd.DataFrame, period: str) -> None:
     print(f"  Saved: {fig_path}")
 
 
-def run_plots(tuning_df: pd.DataFrame) -> None:
+def run_plots(tuning_df: pd.DataFrame,
+              exclude_labels: list[str] | None = None) -> None:
     """Generate all tuning plots for every period."""
     for period in PERIODS:
-        plot_config_comparison(tuning_df, period)
+        plot_config_comparison(tuning_df, period, exclude_labels=exclude_labels)
         plot_convergence_sensitivity(tuning_df, period)
 
 # ── Best-parameter selection ───────────────────────────────────────────────────
