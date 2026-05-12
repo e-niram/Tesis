@@ -17,7 +17,7 @@ def _db_to_pressure(db):
 def _pressure_to_db(p):
     return 20 * np.log10(np.where(p > 0, p, 1e-12))
 
-def generate_pro_map(csv_path, data_path, output_path='results/clustering/madrid_map_nighttime.pdf'):
+def generate_pro_map(csv_path, data_path, output_path='results/clustering/final/madrid_map_nighttime.pdf'):
     results_df = pd.read_csv(csv_path, sep=';')
     df_coords = pd.DataFrame.from_dict(COORDINATES, orient='index', columns=['lat', 'lon']).reset_index()
     df_coords.columns = ['Station_ID', 'lat', 'lon']
@@ -61,7 +61,7 @@ def generate_pro_map(csv_path, data_path, output_path='results/clustering/madrid
     ctx.add_basemap(ax, source=ctx.providers.CartoDB.Positron)
 
     period_label = 'Nocturno' if 'nighttime' in output_path else 'Diurno'
-    ax.set_title(f'Mapa Acústico de Madrid - Ruido {period_label}', fontsize=18, pad=20)
+    ax.set_title(f'Distribución espacial de estaciones según clúster - Período {period_label}', fontsize=18, pad=20)
     ax.axis('off')
     ax.legend(title="Grupos Acústicos", loc='lower right', frameon=True, fontsize=12)
 
@@ -77,13 +77,13 @@ def generate_pro_map(csv_path, data_path, output_path='results/clustering/madrid
 
 # Ejecución
 MAPS = {
-    'nighttime': 'results/clustering/metrics/Results_nighttime_k3_s47.csv',
-    'daytime':   'results/clustering/metrics/Results_daytime_k3_s48.csv',
+    'nighttime': 'results/clustering/final/groupings/nighttime_DTW_Sakoe-Chiba_r5pct_k3_seed42.csv',
+    'daytime':   'results/clustering/final/groupings/daytime_DTW_Sakoe-Chiba_r5pct_k3_seed42.csv',
 }
 
 for period, csv_input in MAPS.items():
     generate_pro_map(
         csv_path=csv_input,
         data_path=f'data/final/{period}_final.csv',
-        output_path=f'results/clustering/madrid_map_{period}.pdf',
+        output_path=f'results/clustering/final/madrid_map_{period}.pdf',
     )
