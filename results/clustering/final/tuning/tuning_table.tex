@@ -1,0 +1,111 @@
+% ── Tuning results — paste into Overleaf ─────────────────
+% Requires \usepackage{booktabs} in preamble
+
+% ────────────────────────────────────────────────────────
+% Period: Nocturno
+% ────────────────────────────────────────────────────────
+
+\begin{table}[ht]
+  \centering
+  \caption{Comparación de configuraciones de distancia — Período Nocturno. Silueta promediada sobre \texttt{max\_iter}, \texttt{n\_init} y semillas; $\pm$ indica la desviación estándar entre semillas. La fila en negrita corresponde a la configuración seleccionada.}
+  \label{tab:tuning_config_nighttime}
+  \begin{tabular}{llrcc}
+    \toprule
+    \textbf{Configuración} & \textbf{$k$} & \textbf{Inercia} & \textbf{Silueta} \\
+    \midrule
+    DTW Sakoe-Chiba r=10\% & 2 & 10288.0 $\pm$ 44.1 & 0.5323 $\pm$ 0.0000 \\
+     & 3 & 8291.4 $\pm$ 88.0 & 0.3803 $\pm$ 0.0114 \\
+     & 4 & 6849.8 $\pm$ 23.2 & 0.3105 $\pm$ 0.0010 \\
+     & 5 & 5959.8 $\pm$ 75.8 & 0.3151 $\pm$ 0.0026 \\
+    DTW Sakoe-Chiba r=20\% & 2 & 9829.7 $\pm$ 51.2 & 0.4969 $\pm$ 0.0004 \\
+     & 3 & 8130.7 $\pm$ 33.6 & 0.3424 $\pm$ 0.0002 \\
+     & 4 & 6740.1 $\pm$ 11.5 & 0.2719 $\pm$ 0.0026 \\
+     & 5 & 6134.7 $\pm$ 204.5 & 0.2436 $\pm$ 0.0277 \\
+    \textbf{DTW Sakoe-Chiba r=5\%} & \textbf{2} & \textbf{10922.4 $\pm$ 203.5} & \textbf{0.5502 $\pm$ 0.0000} \\
+     & 3 & 8530.8 $\pm$ 36.3 & 0.4198 $\pm$ 0.0023 \\
+     & 4 & 6909.8 $\pm$ 76.7 & 0.3342 $\pm$ 0.0004 \\
+     & 5 & 6018.6 $\pm$ 138.2 & 0.3272 $\pm$ 0.0178 \\
+    Euclidiana & 2 & 45536.3 $\pm$ 0.0 & 0.4949 $\pm$ 0.0000 \\
+     & 3 & 30350.8 $\pm$ 0.0 & 0.3741 $\pm$ 0.0000 \\
+     & 4 & 21569.9 $\pm$ 0.0 & 0.3370 $\pm$ 0.0000 \\
+     & 5 & 15737.5 $\pm$ 98.9 & 0.3411 $\pm$ 0.0031 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}[ht]
+  \centering
+  \caption{Sensibilidad a parámetros de convergencia para \textit{DTW Sakoe-Chiba r=5\%} — Período Nocturno. Cada celda muestra la mejor silueta sobre $k \in {2,3,4,5}$. La similitud entre celdas confirma que estos parámetros tienen escasa influencia en el resultado.}
+  \label{tab:tuning_conv_nighttime}
+  \begin{tabular}{rrc}
+    \toprule
+    \textbf{\texttt{max\_iter}} & \textbf{\texttt{n\_init}} & \textbf{Silueta (mejor $k$)} \\
+    \midrule
+    \textbf{20} & \textbf{5} & \textbf{0.5502} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+% ────────────────────────────────────────────────────────
+% Period: Diurno
+% ────────────────────────────────────────────────────────
+
+\begin{table}[ht]
+  \centering
+  \caption{Comparación de configuraciones de distancia — Período Diurno. Silueta promediada sobre \texttt{max\_iter}, \texttt{n\_init} y semillas; $\pm$ indica la desviación estándar entre semillas. La fila en negrita corresponde a la configuración seleccionada.}
+  \label{tab:tuning_config_daytime}
+  \begin{tabular}{llrcc}
+    \toprule
+    \textbf{Configuración} & \textbf{$k$} & \textbf{Inercia} & \textbf{Silueta} \\
+    \midrule
+    DTW Sakoe-Chiba r=10\% & 2 & 10596.8 $\pm$ 35.1 & 0.4140 $\pm$ 0.0081 \\
+     & 3 & 8460.6 $\pm$ 124.3 & 0.2990 $\pm$ 0.0145 \\
+     & 4 & 7296.3 $\pm$ 90.3 & 0.2711 $\pm$ 0.0191 \\
+     & 5 & 6355.8 $\pm$ 44.1 & 0.2083 $\pm$ 0.0025 \\
+    DTW Sakoe-Chiba r=20\% & 2 & 10372.2 $\pm$ 123.6 & 0.3855 $\pm$ 0.0048 \\
+     & 3 & 8528.0 $\pm$ 61.2 & 0.2818 $\pm$ 0.0049 \\
+     & 4 & 7340.6 $\pm$ 94.2 & 0.2451 $\pm$ 0.0119 \\
+     & 5 & 6419.5 $\pm$ 71.1 & 0.1806 $\pm$ 0.0190 \\
+    DTW Sakoe-Chiba r=5\% & 2 & 10950.6 $\pm$ 27.9 & 0.4302 $\pm$ 0.0088 \\
+     & 3 & 8400.1 $\pm$ 33.0 & 0.3208 $\pm$ 0.0066 \\
+     & 4 & 7351.7 $\pm$ 117.1 & 0.2939 $\pm$ 0.0112 \\
+     & 5 & 6473.0 $\pm$ 34.3 & 0.2057 $\pm$ 0.0118 \\
+    \textbf{Euclidiana} & \textbf{2} & \textbf{43027.1 $\pm$ 0.0} & \textbf{0.4399 $\pm$ 0.0000} \\
+     & 3 & 26219.9 $\pm$ 20.7 & 0.3808 $\pm$ 0.0027 \\
+     & 4 & 17859.1 $\pm$ 0.0 & 0.3761 $\pm$ 0.0000 \\
+     & 5 & 14012.1 $\pm$ 0.0 & 0.3259 $\pm$ 0.0000 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}[ht]
+  \centering
+  \caption{Sensibilidad a parámetros de convergencia para \textit{Euclidiana} — Período Diurno. Cada celda muestra la mejor silueta sobre $k \in {2,3,4,5}$. La similitud entre celdas confirma que estos parámetros tienen escasa influencia en el resultado.}
+  \label{tab:tuning_conv_daytime}
+  \begin{tabular}{rrc}
+    \toprule
+    \textbf{\texttt{max\_iter}} & \textbf{\texttt{n\_init}} & \textbf{Silueta (mejor $k$)} \\
+    \midrule
+    \textbf{20} & \textbf{5} & \textbf{0.4399} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+% ────────────────────────────────────────────────────────
+% Final selection summary
+% ────────────────────────────────────────────────────────
+
+\begin{table}[ht]
+  \centering
+  \caption{Parámetros finales seleccionados por período. La configuración elegida maximiza el coeficiente de silueta en la búsqueda en rejilla.}
+  \label{tab:tuning_final}
+  \begin{tabular}{llrrrr}
+    \toprule
+    \textbf{Período} & \textbf{Configuración} & \textbf{$k$} & \textbf{\texttt{max\_iter}} & \textbf{\texttt{n\_init}} & \textbf{Silueta} \\
+    \midrule
+    Nocturno & DTW Sakoe-Chiba r=5\% & 2 & 20 & 5 & 0.5502 \\
+    Diurno & Euclidiana & 2 & 20 & 5 & 0.4399 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
