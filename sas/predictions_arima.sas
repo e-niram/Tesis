@@ -249,3 +249,22 @@ PROC MEANS DATA=work.all_forecasts_arima N MEAN STDDEV MIN MAX;
    LABEL abs_error="Absolute Error (dB)" pct_error="Absolute % Error";
    TITLE "Overall Forecast Accuracy Summary - all windows (ARIMA)";
 RUN;
+
+/* ============================================================
+ACF/PACF identification and Residual Diagnostic plots
+============================================================ */
+ODS GRAPHICS ON / RESET WIDTH=768px HEIGHT=500px IMAGEFMT=PNG;
+
+/* Figure 1: ACF/PACF identification */
+PROC ARIMA DATA=TFM.ClusterMeansDaytime(OBS=3500) PLOTS=ALL;
+   IDENTIFY VAR=Cluster_0(1,7) NLAG=30;
+QUIT;
+
+/* Figures 2 & 3: residual diagnostics + forecast fan */
+PROC ARIMA DATA=TFM.ClusterMeansDaytime(OBS=3500) PLOTS=ALL;
+   IDENTIFY VAR=Cluster_0(1,7) NLAG=30;
+   ESTIMATE P=(1) Q=(1 7 8) METHOD=CLS;
+   FORECAST LEAD=14 INTERVAL=day BACK=60;
+QUIT;
+
+ODS GRAPHICS OFF;
