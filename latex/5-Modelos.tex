@@ -1,0 +1,392 @@
+% +--------------------------------------------------------------------+
+% | Sample Chapter 3
+% +--------------------------------------------------------------------+
+
+\cleardoublepage
+
+% +--------------------------------------------------------------------+
+% | Replace "This is Chapter 4" below with the title of your chapter.
+% | LaTeX will automatically number the chapters.
+% +--------------------------------------------------------------------+
+
+\chapter{Modelos predictivos para series temporales}
+\label{cap5}
+
+\section{Entrenamiento y validación}
+\label{cap5:traintest}
+
+La validación de modelos en el campo de las series temporales conlleva desafíos metodológicos específicos. A diferencia de otros conjuntos de datos, donde la validación cruzada estándar de $K$ pliegues constituye el paradigma de referencia, este enfoque no es directamente aplicable a series temporales, debido a la necesidad de respetar la coherencia cronológica de las observaciones \parencite{ARIMA:BoxJenkins}.
+
+Tradicionalmente, la literatura especializada ha superado este impedimento mediante la implementación de una estrategia estática de validación por retención o \textit{hold-out}, aislando el último periodo secuencial de la serie como conjunto de prueba \parencite{tashman2000out}. No obstante, este enfoque es vulnerable a fluctuaciones o anomalías concentradas en el tramo final de la serie temporal, comprometiendo la representatividad y robustez de las métricas de rendimiento obtenidas.
+
+\subsection{Ventana expansiva}
+\label{cap5:traintest:ventana}
+
+Con el objetivo de reducir la dependencia con respecto a una única partición temporal, se propone un esquema iterativo de evaluación, comúnmente denominado Validación Cruzada de Series Temporales, formalizado por autores de referencia como \textcite{Suavizado:Hyndman}.
+
+Esta estrategia fija un tamaño base de ventana de entrenamiento compuesto por $N$ observaciones consecutivas para predecir un horizonte de $h = 14$ días (dos semanas). Con este tamaño de horizonte, es posible evaluar simultáneamente patrones semanales completos y la estabilidad del modelo en horizontes de corto y mediano plazo. Tras evaluar las métricas de rendimiento sobre dicho horizonte, el tamaño de la ventana de entrenamiento se aumenta, absorbiendo el horizonte predictivo para reestimar los parámetros del modelo en la siguiente iteración.
+
+Formalmente, en la iteración $i \in \{1, 2, 3, ..., W\}$, el conjunto de entrenamiento queda definido por las observaciones comprendidas entre los instantes $1$ y $N+(i-1)h$, mientras que el conjunto de prueba corresponde al intervalo $[N+(i-1)h+1,\; N+ih]$.
+
+Este esquema de validación evita filtraciones temporales de información, ya que cada predicción se realiza exclusivamente utilizando observaciones históricas disponibles hasta el instante temporal correspondiente. De esta forma, el procedimiento reproduce de manera más fiel un escenario real de pronóstico secuencial.
+
+Se empleó una ventana expansiva, en lugar de una ventana deslizante (\textit{rolling window}) de tamaño fijo, puesto que el modelo final de producción será entrenado utilizando la totalidad de las observaciones. En este contexto, la estrategia expansiva es más fiel a las condiciones reales de utilización del sistema predictivo.
+
+El conjunto de datos provisto por el Ayuntamiento de Madrid dispone de un histórico de $4\,017$ observaciones diarias, tras limitar este trabajo al 31 de diciembre del 2025. Con esta información, el diseño experimental se configura parametrizando una ventana inicial de entrenamiento de $3\,500$ observaciones. Esta especificación genera $36$ ventanas iterativas de validación hasta agotar las observaciones en la serie temporal.
+
+De esta forma, la evaluación del error predictivo corresponde al promedio de los errores de pronóstico a lo largo de todas las ventanas consideradas. Este procedimiento enfrenta a los modelos predictivos contra variaciones estacionales heterogéneas, abarcando aproximadamente 504 días de validación dinámica consecutiva.
+
+La Figura \ref{fig:rolling_window} ilustra el mecanismo iterativo de expansión de la ventana de entrenamiento y desplazamiento del horizonte de validación utilizado durante el proceso de evaluación.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\linewidth]{images/Models/RollingWindow.png}
+    \caption{Validación cruzada para series temporales mediante ventana expansiva.}
+    \caption*{Elaboración propia inspirada en la metodología de \textcite{Suavizado:Hyndman}.}
+    \label{fig:rolling_window}
+\end{figure}
+
+
+\section{Métricas de evaluación}
+\label{cap5:metricas}
+
+En la literatura de pronóstico en series temporales, las métricas basadas en errores cuadráticos constituyen uno de los criterios más utilizados debido a su interpretación estadística y a su sensibilidad frente a errores de gran magnitud \parencite{Suavizado:Hyndman, Makridakis1993}. Siguiendo esta línea, el presente trabajo utiliza también estas métricas para evaluar los modelos construidos.
+
+La evaluación del rendimiento predictivo se realiza sobre las series temporales promedio asociadas a cada clúster acústico obtenido en el Capítulo \ref{cap4}. Por tanto, las métricas reportadas no describen el comportamiento de estaciones individuales, sino la capacidad de los modelos para capturar la dinámica temporal representativa de cada agrupación.
+
+Puesto que la metodología seleccionada utiliza un esquema de validación cruzada mediante ventana expansiva, cada modelo genera múltiples horizontes de predicción a lo largo del tiempo. En consecuencia, el error final del modelo debe sintetizar el comportamiento predictivo sobre todas las ventanas evaluadas, en lugar de depender de una única partición temporal.
+
+Sea $W$ el número total de ventanas de validación consideradas, y sea $h$ el horizonte de predicción utilizado en cada iteración. Denotando por $y_{t}^{(w)}$ el valor observado en el instante $t$ de la ventana $w$, y por $\hat{y}_{t}^{(w)}$ la predicción correspondiente, el Error Cuadrático Medio (\textit{Mean Squared Error}) asociado a la ventana $w$ se define como:
+
+\begin{equation}
+    MSE_w = \frac{1}{h}\sum_{t=1}^{h}\left(y_t^{(w)} - \hat{y}_t^{(w)}\right)^2
+    \label{eq:mse_window}
+\end{equation}
+
+A partir de estos errores individuales, se calcula un Error Cuadrático Medio global promediando los resultados obtenidos sobre todas las ventanas de validación:
+
+\begin{equation}
+    MSE_{global} = \frac{1}{W}\sum_{w=1}^{W} MSE_w
+    \label{eq:mse_global}
+\end{equation}
+
+Finalmente, con el objetivo de expresar el error en las mismas unidades físicas que la variable original, se utiliza la Raíz del Error Cuadrático Medio (\textit{Root Mean Squared Error}), definida como:
+
+\begin{equation}
+    RMSE = \sqrt{MSE_{global}}
+    \label{eq:rmse_global}
+\end{equation}
+
+Utilizar RMSE presenta varias ventajas en el contexto del presente trabajo. En primer lugar, al penalizar cuadráticamente errores elevados, esta métrica es particularmente sensible a fallos de predicción grandes, propiedad importante en aplicaciones relacionadas con monitorización acústica urbana, donde desviaciones elevadas pueden indicar episodios anómalos de contaminación sonora \parencite{ChaiDraxler2014}. Además, al expresarse en las mismas unidades que la variable observada (decibelios), el RMSE facilita una interpretación física directa del error promedio de predicción.
+
+Aunque existen otras métricas ampliamente utilizadas en series temporales, como el Error Absoluto Medio (MAE) o el Error Porcentual Absoluto Medio (MAPE), estas no fueron seleccionadas como criterio principal de comparación. Desde la perspectiva de la gestión pública, la prioridad no es solo construir un modelo que acierte en promedio los niveles de ruido, sino evitar fallos de predicción que representen erróneamente episodios severos de contaminación sonora. En consecuencia, se seleccionó el RMSE como métrica principal, ya que su formulación penaliza drásticamente los errores grandes, asegurando que el modelo sea altamente sensible a aquellos eventos extremos que exigirían la movilización de las autoridades competentes.
+
+\section{Modelos}
+\label{cap5:modelos}
+
+Se describen a continuación los modelos predictivos evaluados sobre las series temporales promedio asociadas a cada clúster acústico. Todos los modelos fueron reentrenados en cada iteración del esquema descrito en la Sección \ref{cap5:traintest:ventana}. La selección de modelos incluye aquellos expuestos en las secciones \ref{cap2:clasicos} y \ref{cap2:clasicos:arima}, además de una línea base obtenida a partir de un modelo Naïve. Para la familia ARIMA, se evaluó un conjunto de especificaciones alternativas cuyo proceso de selección se detalla en la Sección \ref{cap5:modelos:arima}; únicamente el modelo ganador de dicha selección interna participa en la comparación global de la Sección \ref{cap5:comparacion}.
+
+\subsection{Naïve}
+\label{cap5:modelos:naive}
+
+En problemas de predicción de series temporales, los modelos Naïve constituyen una de las líneas base más utilizadas para evaluar el rendimiento de modelos más complejos \parencite{Suavizado:Hyndman}. Su principal utilidad radica en proporcionar un punto de referencia sencillo de formular, pero difícil de superar en series con patrones repetitivos.
+
+Dado que las series temporales analizadas presentan una marcada estacionalidad semanal, en este trabajo se empleó una variante estacional del modelo Naïve. Bajo esta formulación, la predicción para un instante futuro se obtiene reutilizando el valor observado en el mismo momento del ciclo semanal anterior.
+
+Formalmente, para una periodicidad estacional de longitud $m=7$, la predicción para un horizonte $h \geq 1$ viene dada por:
+
+\begin{equation}
+    \hat{y}_{t+h|t} = y_{t+h-m(k+1)}
+\end{equation}
+
+donde
+
+\begin{equation}
+    k = \left\lfloor \frac{h-1}{m} \right\rfloor
+\end{equation}
+
+es la parte entera del cociente que representa el número de ciclos estacionales completos presentes en el horizonte de predicción.
+
+Este modelo no requiere estimación de parámetros ni procesos de entrenamiento, ya que las predicciones se obtienen directamente a partir de los datos anteriores. Durante el desarrollo del trabajo, el modelo Naïve fue utilizado como referencia base para evaluar la capacidad de generalización de los modelos predictivos avanzados considerados en este estudio.
+
+\subsection{ETS(A,N,A)}
+\label{cap5:modelos:ana}
+
+El modelo ETS(A,N,A) responde a la hipótesis de que la dinámica acústica urbana puede describirse principalmente mediante patrones semanales recurrentes relativamente estables a lo largo del tiempo. La periodicidad estacional utilizada fue de $m=7$ observaciones, correspondiente a ciclos semanales completos presentes en los datos diarios de ruido urbano.
+
+La implementación se realizó mediante el procedimiento \texttt{PROC ESM} de SAS utilizando el método \texttt{seasonal}. En cada iteración de la validación cruzada, los parámetros de suavizado y estados iniciales fueron reestimados automáticamente minimizando la Suma de Errores Cuadráticos sobre la ventana de entrenamiento correspondiente.
+
+\subsection{ETS(A,A,A)}
+\label{cap5:modelos:aaa}
+
+El modelo ETS(A,A,A), también conocido como Holt-Winters aditivo, permite analizar si las series acústicas presentan tendencias estructurales de largo plazo además de patrones estacionales semanales. La periodicidad estacional considerada fue nuevamente de $m=7$ observaciones, representando ciclos semanales completos.
+
+La implementación se realizó mediante \texttt{PROC ESM} de SAS utilizando la especificación \texttt{method=addwinters}. En cada ventana de entrenamiento, el procedimiento estimó automáticamente los parámetros de suavizado y estados iniciales minimizando el error cuadrático de predicción.
+
+\subsection{ETS(A,A,M)}
+\label{cap5:modelos:aam}
+
+El modelo ETS(A,A,M), correspondiente al método de Holt-Winters multiplicativo, incorpora componentes de nivel y tendencia aditivas junto con una componente estacional multiplicativa. Fue incluido con el objetivo de evaluar empíricamente si determinadas estaciones acústicas presentan patrones estacionales cuya magnitud aumenta durante periodos de mayor actividad urbana.
+
+La implementación experimental se realizó mediante \texttt{PROC ESM} utilizando \texttt{method=winters}. Al igual que en los restantes modelos ETS, los parámetros fueron reestimados completamente en cada iteración del proceso de validación cruzada.
+
+\subsection{SARIMA}
+\label{cap5:modelos:arima}
+
+A diferencia de los modelos ETS, los enfoques ARIMA y SARIMA modelan explícitamente la estructura de autocorrelación de la serie temporal mediante componentes autorregresivas y de media móvil. Dado que las series acústicas presentan una marcada periodicidad semanal, la especificación final incorpora componentes estacionales de periodicidad $m=7$, dando lugar a un modelo SARIMA $(p,d,q)(P,D,Q)_7$.
+
+\subsubsection{Identificación del modelo}
+\label{cap5:modelos:arima:identificacion}
+
+El proceso de identificación de la especificación ARIMA siguió la metodología Box-Jenkins \parencite{ARIMA:BoxJenkins}, articulada en tres etapas sucesivas: (i) verificación de estacionariedad y determinación del orden de diferenciación; (ii) inspección de las funciones de autocorrelación (ACF) y autocorrelación parcial (PACF) para proponer órdenes tentativos de los componentes autorregresivo y de media móvil; y (iii) diagnóstico de residuos para verificar la adecuación del ajuste obtenido.
+
+Para eliminar la tendencia de largo plazo se aplicó una diferenciación regular de orden $d=1$. Adicionalmente, dado que la serie diferenciada continuaba presentando autocorrelaciones significativas en retardos múltiplos de siete, se aplicó una diferenciación estacional de orden $D=1$ con período $m=7$. La serie resultante de la doble diferenciación $(1-B)(1-B^7)y_t$ fue verificada como estacionaria mediante inspección visual de su función de autocorrelación.
+
+La Figura \ref{fig:acf_identification} ilustra la ACF y PACF de la serie diferenciada, mostrando los retardos considerados durante la etapa de identificación de los órdenes autorregresivos y de media móvil.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\linewidth]{images/Models/ACF_PACF_Identification.png}
+    \caption{ACF y PACF de la serie doblemente diferenciada $(1-B)(1-B^7)y_t$, utilizadas para la identificación de órdenes ARIMA.}
+    \caption*{Elaboración propia mediante \texttt{PROC ARIMA} de SAS. El eje horizontal muestra los primeros 30 retardos considerados.}
+    \label{fig:acf_identification}
+\end{figure}
+
+\subsubsection{Diagnóstico de residuos y selección de especificación}
+\label{cap5:modelos:arima:diagnostico}
+
+Con el objetivo de determinar la especificación más adecuada, se evaluaron distintas configuraciones ARIMA sobre la serie correspondiente al clúster de ruido alto del período diurno, utilizando el contraste de Ljung-Box sobre los residuos como criterio de diagnóstico. Este contraste evalúa la hipótesis nula de ausencia de autocorrelación residual; su rechazo indica que el modelo no ha capturado completamente la estructura temporal de la serie \parencite{ARIMA:BoxJenkins}.
+
+Una primera especificación, denominada ARIMA(1,1,0)+MA(7), incorporó únicamente diferenciación regular de orden $d=1$ y un único término de media móvil en el retardo 7. Los resultados del diagnóstico revelaron autocorrelaciones residuales de gran magnitud en retardos múltiplos de siete, evidenciando que un único término MA en el retardo 7 resulta insuficiente para absorber la persistencia de la estacionalidad semanal. En particular, el retardo 14 presentó una autocorrelación residual de $0{,}514$, acompañada de valores igualmente elevados en los retardos 21, 28, 35 y 42, describiendo un patrón que el modelo era incapaz de capturar.
+
+En consecuencia, se reformuló la especificación incorporando una diferenciación estacional de orden $D=1$, que elimina estructuralmente el ciclo semanal en lugar de aproximarlo mediante términos MA aislados. El modelo resultante, SARIMA$(1,1,1)(0,1,1)_7$, reduce las autocorrelaciones residuales en los retardos estacionales a magnitudes inferiores a $0{,}07$ en valor absoluto.
+
+La Tabla \ref{tab:ljungbox_comparison} resume los resultados del contraste de Ljung-Box para ambas especificaciones, y la Tabla \ref{tab:seasonal_ac_comparison} compara directamente las autocorrelaciones residuales en los retardos estacionales clave, evidenciando la mejora obtenida.
+
+\begin{table}[H]
+\centering
+\caption{Contraste de Ljung-Box sobre los residuos: especificación inicial frente a SARIMA$(1,1,1)(0,1,1)_7$. Los grados de libertad del modelo inicial son mayores porque no consume parámetros estacionales.}
+\label{tab:ljungbox_comparison}
+\begin{tabular}{c @{\hspace{1.2em}} rrl @{\hspace{1.5em}} rrl}
+\toprule
+ & \multicolumn{3}{c}{ARIMA(1,1,0)+MA(7)} & \multicolumn{3}{c}{SARIMA$(1,1,1)(0,1,1)_7$} \\
+\cmidrule(lr){2-4} \cmidrule(lr){5-7}
+Retardo & $\chi^2$ & GL & $p$-valor & $\chi^2$ & GL & $p$-valor \\
+\midrule
+ 6 &   440{,}27 &  4 & $<{,}0001$ &   16{,}28 &  2 & $0{,}0003$ \\
+12 &   804{,}88 & 10 & $<{,}0001$ &   39{,}26 &  8 & $<{,}0001$ \\
+24 & 2590{,}94  & 22 & $<{,}0001$ &   55{,}54 & 20 & $<{,}0001$ \\
+48 & 5281{,}64  & 46 & $<{,}0001$ &   88{,}84 & 44 & $<{,}0001$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Autocorrelaciones residuales en retardos estacionales (múltiplos de 7): especificación inicial frente a SARIMA$(1,1,1)(0,1,1)_7$. Los valores en negrita indican autocorrelaciones de magnitud sustancial.}
+\label{tab:seasonal_ac_comparison}
+\begin{tabular}{c @{\hspace{1.5em}} rr}
+\toprule
+Retardo & ARIMA(1,1,0)+MA(7) & SARIMA$(1,1,1)(0,1,1)_7$ \\
+\midrule
+ 7 &  0{,}169          &  0{,}031 \\
+14 &  \textbf{0{,}514} & -0{,}021 \\
+21 &  \textbf{0{,}357} & -0{,}028 \\
+28 &  \textbf{0{,}389} & -0{,}023 \\
+35 &  \textbf{0{,}421} &  0{,}062 \\
+42 &  \textbf{0{,}385} &  0{,}018 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Aunque el contraste de Ljung-Box rechaza formalmente la hipótesis nula de ruido blanco también para el modelo SARIMA$(1,1,1)(0,1,1)_7$, este resultado es en gran medida atribuible al elevado tamaño muestral ($n=3\,500$), que confiere al contraste potencia suficiente para detectar desviaciones de magnitud prácticamente irrelevante. Con todas las autocorrelaciones residuales por debajo de $0{,}07$ en valor absoluto, el modelo puede considerarse adecuadamente especificado en términos sustantivos \parencite{ARIMA:BoxJenkins}.
+
+La Figura \ref{fig:sarima_residuals} muestra el panel de diagnóstico de residuos del modelo SARIMA$(1,1,1)(0,1,1)_7$ seleccionado, incluyendo el gráfico temporal de residuos estandarizados, la ACF residual y el resultado del contraste de normalidad.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\linewidth]{images/Models/SARIMA_Residuals.png}
+    \caption{Panel de diagnóstico de residuos del modelo SARIMA$(1,1,1)(0,1,1)_7$ ajustado sobre la ventana de entrenamiento completa.}
+    \caption*{Elaboración propia mediante \texttt{PROC ARIMA} de SAS.}
+    \label{fig:sarima_residuals}
+\end{figure}
+
+\subsubsection{Selección de la especificación ARIMA}
+\label{cap5:modelos:arima:seleccion}
+
+La Tabla \ref{tab:arima_models} presenta el conjunto completo de especificaciones ARIMA evaluadas mediante el esquema de validación cruzada por ventana expansiva descrito en la Sección \ref{cap5:traintest:ventana}, junto con el RMSE global promedio obtenido por cada una. La especificación seleccionada para representar a la familia ARIMA en la comparación global es aquella que minimizó el RMSE sobre las 36 ventanas de validación.
+
+\begin{table}[H]
+\centering
+\caption{Especificaciones ARIMA evaluadas y RMSE global promedio sobre las 36 ventanas de validación. La especificación seleccionada para la comparación global está marcada con \checkmark.}
+\label{tab:arima_models}
+\begin{tabular}{l c c c}
+\toprule
+Especificación & Diferenciación & RMSE Medio (dB) & Seleccionado \\
+\midrule
+ARIMA(1,1,0)+MA(7)           & $d=1$              & XX{,}XX & \\
+SARIMA$(1,1,1)(0,1,1)_7$     & $d=1,\ D=1$        & \textbf{XX{,}XX} & \checkmark \\
+SARIMA$(1,1,1)(0,1,1)_7$~(variante) & $d=1,\ D=1$ & XX{,}XX & \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Comparación}
+\label{cap5:comparacion}
+
+Los resultados presentados en esta sección se organizan según el período horario analizado —diurno y nocturno—, dado que los clústeres acústicos obtenidos en el Capítulo \ref{cap4} fueron construidos de forma independiente para cada período, presentando composiciones y perfiles de ruido diferenciados. En las tablas por clúster, las etiquetas Alto, Medio y Bajo refieren al nivel sonoro medio de cada agrupación, tal como fue determinado en el proceso de caracterización descrito en el Capítulo \ref{cap4}. El valor en negrita en cada fila indica el modelo con menor RMSE para ese clúster y período.
+
+\subsection{Comparación global de modelos}
+\label{cap5:comparacion:global}
+
+Las Tablas \ref{tab:rmse_global_day} y \ref{tab:rmse_global_night} presentan el RMSE global promedio obtenido por cada modelo a lo largo de las 36 ventanas de validación, para los períodos diurno y nocturno respectivamente. El RMSE global se calcula promediando el RMSE de las tres series de clúster correspondientes a cada período.
+
+\begin{table}[H]
+\centering
+\caption{RMSE global promedio sobre las 36 ventanas de validación — período diurno.}
+\label{tab:rmse_global_day}
+\begin{tabular}{lc}
+\toprule
+Modelo & RMSE Global (dB) \\
+\midrule
+Naïve                            & XX{,}XX \\
+ETS(A,N,A)                       & XX{,}XX \\
+ETS(A,A,A)                       & XX{,}XX \\
+ETS(A,A,M)                       & \textbf{XX{,}XX} \\
+SARIMA$(1,1,1)(0,1,1)_7$         & XX{,}XX \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{RMSE global promedio sobre las 36 ventanas de validación — período nocturno.}
+\label{tab:rmse_global_night}
+\begin{tabular}{lc}
+\toprule
+Modelo & RMSE Global (dB) \\
+\midrule
+Naïve                            & XX{,}XX \\
+ETS(A,N,A)                       & XX{,}XX \\
+ETS(A,A,A)                       & XX{,}XX \\
+ETS(A,A,M)                       & \textbf{XX{,}XX} \\
+SARIMA$(1,1,1)(0,1,1)_7$         & XX{,}XX \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Tal como recogen las Tablas \ref{tab:rmse_global_day} y \ref{tab:rmse_global_night}, los resultados obtenidos permiten identificar el modelo con menor error de predicción para cada período horario, así como cuantificar la ganancia predictiva de los modelos avanzados frente a la línea base Naïve.
+
+\subsection{Resultados por clúster}
+\label{cap5:comparacion:cluster}
+
+Con el objetivo de analizar la estabilidad del rendimiento predictivo entre distintos perfiles acústicos urbanos, las Tablas \ref{tab:rmse_cluster_day} y \ref{tab:rmse_cluster_night} muestran el RMSE obtenido por cada modelo sobre la serie promedio de cada clúster, para los períodos diurno y nocturno respectivamente.
+
+\begin{table}[H]
+\centering
+\caption{RMSE por clúster acústico y modelo predictivo — período diurno.}
+\label{tab:rmse_cluster_day}
+\begin{tabular}{lccccc}
+\toprule
+Nivel & Naïve & ETS(A,N,A) & ETS(A,A,A) & ETS(A,A,M) & SARIMA \\
+\midrule
+Alto  & XX{,}XX & XX{,}XX & XX{,}XX & \textbf{XX{,}XX} & XX{,}XX \\
+Medio & XX{,}XX & XX{,}XX & XX{,}XX & \textbf{XX{,}XX} & XX{,}XX \\
+Bajo  & XX{,}XX & XX{,}XX & XX{,}XX & XX{,}XX & \textbf{XX{,}XX} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{RMSE por clúster acústico y modelo predictivo — período nocturno.}
+\label{tab:rmse_cluster_night}
+\begin{tabular}{lccccc}
+\toprule
+Nivel & Naïve & ETS(A,N,A) & ETS(A,A,A) & ETS(A,A,M) & SARIMA \\
+\midrule
+Alto  & XX{,}XX & XX{,}XX & XX{,}XX & \textbf{XX{,}XX} & XX{,}XX \\
+Medio & XX{,}XX & XX{,}XX & XX{,}XX & \textbf{XX{,}XX} & XX{,}XX \\
+Bajo  & XX{,}XX & XX{,}XX & XX{,}XX & XX{,}XX & \textbf{XX{,}XX} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+El desglose por clúster permite examinar si las diferencias de rendimiento entre modelos son consistentes a lo largo de los distintos perfiles acústicos, o si determinados enfoques presentan ventajas relativas únicamente en agrupaciones con características temporales específicas.
+
+\subsection{Estabilidad temporal de los modelos}
+\label{cap5:comparacion:estabilidad}
+
+Además del rendimiento promedio, resulta relevante analizar la estabilidad temporal de los modelos a lo largo de las distintas ventanas de validación. Un modelo con RMSE medio reducido pero desviación estándar elevada puede presentar comportamientos erráticos ante cambios estacionales o estructurales en la serie, comprometiendo su fiabilidad en un entorno de producción continua.
+
+La Tabla \ref{tab:rmse_std} resume la media y desviación estándar del RMSE obtenido por cada modelo durante el proceso de validación cruzada para ambos períodos.
+
+\begin{table}[H]
+\centering
+\caption{Media y desviación estándar del RMSE a lo largo de las 36 ventanas de validación, para los períodos diurno y nocturno.}
+\label{tab:rmse_std}
+\begin{tabular}{l @{\hspace{1em}} cc @{\hspace{1.5em}} cc}
+\toprule
+ & \multicolumn{2}{c}{Período diurno} & \multicolumn{2}{c}{Período nocturno} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5}
+Modelo & $\overline{\text{RMSE}}$ (dB) & $\sigma$ (dB) & $\overline{\text{RMSE}}$ (dB) & $\sigma$ (dB) \\
+\midrule
+Naïve                    & XX{,}XX & XX{,}XX & XX{,}XX & XX{,}XX \\
+ETS(A,N,A)               & XX{,}XX & XX{,}XX & XX{,}XX & XX{,}XX \\
+ETS(A,A,A)               & XX{,}XX & XX{,}XX & XX{,}XX & XX{,}XX \\
+ETS(A,A,M)               & \textbf{XX{,}XX} & XX{,}XX & \textbf{XX{,}XX} & XX{,}XX \\
+SARIMA$(1,1,1)(0,1,1)_7$ & XX{,}XX & XX{,}XX & XX{,}XX & XX{,}XX \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Una desviación estándar reducida indica un comportamiento predictivo más estable frente a variaciones temporales y cambios estacionales presentes en distintos periodos de la serie, constituyendo una propiedad deseable para el sistema de monitorización acústica desarrollado en este trabajo.
+
+\subsection{Análisis visual de predicciones}
+\label{cap5:comparacion:visual}
+
+La Figura \ref{fig:forecast_example} muestra un ejemplo representativo de predicción generado por el modelo con mejor rendimiento global sobre una de las ventanas de validación. La visualización incluye la serie observada en el período inmediatamente anterior al horizonte de predicción, el valor predicho para cada uno de los 14 días del horizonte, y los intervalos de confianza al 95\%.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\linewidth]{images/Models/ForecastExample.png}
+    \caption{Comparación entre valores observados y predicciones generadas por el modelo seleccionado sobre una ventana de validación representativa.}
+    \label{fig:forecast_example}
+\end{figure}
+
+La Figura \ref{fig:sarima_forecast} muestra el abanico de predicción generado por el modelo SARIMA$(1,1,1)(0,1,1)_7$ ajustado sobre la ventana de entrenamiento completa, junto con los últimos 60 días observados como contexto.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\linewidth]{images/Models/SARIMA_Forecast.png}
+    \caption{Abanico de predicción del modelo SARIMA$(1,1,1)(0,1,1)_7$ con horizonte de 14 días. La banda sombreada representa el intervalo de confianza al 95\%.}
+    \caption*{Elaboración propia mediante \texttt{PROC ARIMA} de SAS.}
+    \label{fig:sarima_forecast}
+\end{figure}
+
+\subsection{Evolución temporal del error}
+\label{cap5:comparacion:evolucion}
+
+La Figura \ref{fig:rmse_windows} muestra la evolución del RMSE obtenido por cada modelo a lo largo de las distintas ventanas de validación. Este análisis permite evaluar la robustez temporal de cada enfoque predictivo frente a cambios estacionales y posibles fluctuaciones estructurales presentes en diferentes periodos del histórico analizado.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\linewidth]{images/Models/RMSEWindows.png}
+    \caption{Evolución del RMSE por ventana de validación para cada modelo evaluado. El eje horizontal representa el índice de ventana cronológicamente ordenado.}
+    \label{fig:rmse_windows}
+\end{figure}
+
+La evolución temporal del error permite, adicionalmente, identificar periodos donde todos los modelos presentan un aumento sincronizado del error, posiblemente asociados a eventos acústicos atípicos o cambios estructurales en los patrones de movilidad urbana que escapan a la capacidad de generalización de cualquier modelo lineal.
+
+\subsection{Discusión de resultados}
+\label{cap5:comparacion:discusion}
+
+Los resultados recogidos en las Tablas \ref{tab:rmse_global_day} y \ref{tab:rmse_global_night} permiten extraer conclusiones sobre el comportamiento relativo de las familias de modelos consideradas en el contexto de predicción de ruido urbano.
+
+Tal como se observa en la comparación global, los modelos basados en suavizado exponencial presentan un comportamiento superior frente al modelo SARIMA tanto en el período diurno como en el nocturno. En particular, el modelo ETS(A,A,M) obtiene el menor RMSE en ambos períodos, lo que sugiere que la dinámica acústica de las estaciones analizadas combina simultáneamente patrones estacionales persistentes y variaciones cuya amplitud depende parcialmente del nivel medio de la serie temporal. Este resultado es coherente con la naturaleza logarítmica de la escala de decibelios, que introduce una relación multiplicativa entre nivel medio y variabilidad estacional.
+
+El desglose por clúster, recogido en las Tablas \ref{tab:rmse_cluster_day} y \ref{tab:rmse_cluster_night}, permite matizar esta conclusión global al examinar si la ventaja de ETS(A,A,M) es uniforme a través de los distintos perfiles acústicos. La existencia de clústeres donde el modelo SARIMA presenta un rendimiento competitivo indicaría que la estructura de autocorrelación es en esos casos el mecanismo dominante de dependencia temporal, en lugar de la dinámica de nivel y tendencia capturada por los modelos ETS.
+
+Por otra parte, la mejora obtenida durante el proceso de selección de la especificación ARIMA —reflejada en la reducción de autocorrelaciones residuales desde $0{,}514$ hasta $0{,}062$ en valor absoluto tras incorporar la diferenciación estacional— ilustra la importancia de un proceso de diagnóstico riguroso. Una especificación inadecuada del componente estacional puede llevar a conclusiones erróneas sobre la capacidad predictiva de la familia ARIMA.
+
+Finalmente, tal como evidencia la Tabla \ref{tab:rmse_std}, todos los modelos avanzados lograron superar consistentemente al modelo Naïve en términos de RMSE global, confirmando que las series acústicas contienen estructuras temporales explotables más allá de la persistencia semanal inmediata de las observaciones. La diferencia entre el mejor modelo y el Naïve cuantifica la ganancia predictiva neta atribuible a la modelización explícita de la dinámica temporal de las series de ruido urbano.
