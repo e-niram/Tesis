@@ -5,8 +5,8 @@ import os
 
 # Fill in the mapping file for each period
 MAPPING_FILES = {
+    'daytime':   'results/clustering/final/groupings/daytime_Euclidiana_k3_seed42.csv',
     'nighttime': 'results/clustering/final/groupings/nighttime_DTW_Sakoe-Chiba_r5pct_k3_seed42.csv',
-    'daytime':   'results/clustering/final/groupings/daytime_DTW_Sakoe-Chiba_r5pct_k3_seed42.csv',
 }
 
 NOISE_LABELS = {
