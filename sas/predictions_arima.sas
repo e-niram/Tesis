@@ -2,18 +2,21 @@
 Rolling Forecast - Daily Noise Level Prediction
 
 Implements an expanding-window rolling forecast using
-ARIMA(1,1,1) (PROC ARIMA).
+a seasonal ARIMA model (PROC ARIMA).
 
 Parameters (edit the calls at the bottom of this file):
 train_obs  : initial training window size in days (default 3500)
 lead       : forecast horizon in days             (default 14)
-target_var : column name in the input dataset
-cluster_id : label used in output file names (e.g. cluster_0)
+target_var : column name in the input dataset; also used as cluster label in output filenames
+time_period: derived automatically from input_ds name (daytime / nighttime)
 
 Model specification:
-ARIMA(1,1,1) — one autoregressive term, one moving-average term,
-one regular difference.  First-differencing removes linear trend;
-AR(1) + MA(1) capture short-range autocorrelation.
+ARIMA(1,1,0)(0,1,1)[7] with additional MA terms at lags 7 and 8.
+- Regular difference (d=1) removes linear trend.
+- Seasonal difference at lag 7 (D=1) removes weekly seasonality.
+- AR(1) captures short-range autocorrelation.
+- MA at lags 1, 7, 8 captures residual short- and weekly-range structure,
+as identified from ACF/PACF analysis on the training data.
 Estimated with Conditional Least Squares (METHOD=CLS) for speed.
 Adjust P=, Q= in the ESTIMATE statement for a different order.
 
@@ -22,8 +25,8 @@ work.all_forecasts_arima    - every individual forecast with CI and actual
 work.forecast_metrics_arima - MAE, RMSE, MAPE per window
 
 CSV exports (persistent across ODA sessions):
-/home/u64274668/sasuser.v94/rolling_forecasts_daytime_<cluster_id>_arima.csv
-/home/u64274668/sasuser.v94/forecast_metrics_daytime_<cluster_id>_arima.csv
+/home/u64274668/sasuser.v94/rolling_forecasts_<daytime|nighttime>_<target_var>_arima.csv
+/home/u64274668/sasuser.v94/forecast_metrics_<daytime|nighttime>_<target_var>_arima.csv
 
 Performance notes:
 - Input data is passed directly to PROC ARIMA via OBS=, eliminating
@@ -36,10 +39,18 @@ five minutes on ODA hardware.
 LIBNAME mydata "/home/u64274668/TFM/Datos/";
 
 /* ---------------------------------------------------------- */
-%MACRO rolling_forecast_arima(input_ds, target_var, cluster_id=cluster_0,
-   time_period=daytime, train_obs=3500, lead=14);
+%MACRO rolling_forecast_arima(input_ds, target_var, train_obs=3500, lead=14);
 
-   %LOCAL total_obs current_end window_num;
+   %LOCAL total_obs current_end window_num time_period cluster_id;
+
+   /* Derive time_period from the dataset name */
+   %IF %INDEX(%UPCASE(&input_ds.), DAYTIME) > 0 %THEN %LET time_period=daytime;
+   %ELSE %IF %INDEX(%UPCASE(&input_ds.), NIGHTTIME) > 0 %THEN %LET
+      time_period=nighttime;
+   %ELSE %LET time_period=unknown;
+
+   /* Use the target variable name as the cluster identifier */
+   %LET cluster_id=&target_var.;
 
    /* --- 1. Total observation count --- */
    PROC SQL NOPRINT;
@@ -70,18 +81,19 @@ LIBNAME mydata "/home/u64274668/TFM/Datos/";
       %PUT NOTE: Window &window_num. | Training on obs 1-&current_end. |
          Forecasting obs %EVAL(&current_end.+1)-%EVAL(&current_end.+&lead.);
 
-      /* 3a. Fit ARIMA(1,1,1) on the training window.
+      /* 3a. Fit seasonal ARIMA on the training window.
       OBS= passes only the training rows to PROC ARIMA directly,
       avoiding an intermediate data copy (saves one I/O per window).
-      IDENTIFY applies one regular difference (d=1).
-      ESTIMATE fits AR(1)+MA(1) via Conditional Least Squares.
+      IDENTIFY VAR=(1,7): regular difference (d=1) + seasonal difference at lag 7 (D=1).
+      ESTIMATE fits AR(1) + MA at lags 1,7,8 via Conditional Least Squares —
+      specification derived from ACF/PACF identification on the training data.
       FORECAST OUT= contains n_training in-sample rows followed by
       LEAD out-of-sample rows; PROC ARIMA back-transforms forecasts
       to the original (undifferenced) scale automatically.
       Output is suppressed via ODS RESULTS OFF set before the loop. */
       PROC ARIMA DATA=&input_ds.(OBS=&current_end.);
          IDENTIFY VAR="&target_var."n(1);
-         ESTIMATE P=1 Q=(7) METHOD=CLS;
+         ESTIMATE P=(1) Q=(7) METHOD=CLS; /* ARIMA (1,1,0) + MA(7) */
          FORECAST LEAD=&lead. OUT=work.arima_out ID=fecha_n INTERVAL=day;
       QUIT;
 
@@ -185,12 +197,12 @@ LIBNAME mydata "/home/u64274668/TFM/Datos/";
 
    /* --- 5. Export to persistent CSV files (downloadable from ODA) --- */
    PROC EXPORT DATA=work.all_forecasts_arima
-      OUTFILE="/home/u64274668/sasuser.v94/rolling_forecasts_&time_period._&cluster_id._arima.csv"
+      OUTFILE="/home/u64274668/TFM/Results/rolling_forecasts_&time_period._&cluster_id._arima.csv"
       DBMS=CSV REPLACE;
    RUN;
 
    PROC EXPORT DATA=work.forecast_metrics_arima
-      OUTFILE="/home/u64274668/sasuser.v94/forecast_metrics_&time_period._&cluster_id._arima.csv"
+      OUTFILE="/home/u64274668/TFM/Results/forecast_metrics_&time_period._&cluster_id._arima.csv"
       DBMS=CSV REPLACE;
    RUN;
 
@@ -200,30 +212,25 @@ LIBNAME mydata "/home/u64274668/TFM/Datos/";
 %MEND rolling_forecast_arima;
 
 /* ============================================================
-Execute the rolling forecast for all three clusters.
-target_var : column name in TFM.ClusterMeansDaytime
-cluster_id : used in output CSV file names
-train_obs  : 3500 = almost ten years of initial training data
-lead       : 14  = predict the next 14 days each window
+Execute the rolling forecast for all clusters and periods.
+target_var  : column name in the input dataset (also used in CSV filenames)
+time_period : auto-derived from dataset name (Daytime / Nighttime)
+train_obs   : 3500 = almost ten years of initial training data
+lead        : 14  = predict the next 14 days each window
 ============================================================ */
-%rolling_forecast_arima(TFM.ClusterMeansDaytime, Cluster_0,
-   cluster_id=cluster_0, train_obs=3500, lead=14);
+%rolling_forecast_arima(TFM.ClusterMeansDaytime, ClusterRuidoAltoDiurno,
+   train_obs=3500, lead=14);
+%rolling_forecast_arima(TFM.ClusterMeansDaytime, ClusterRuidoMedioDiurno,
+   train_obs=3500, lead=14);
+%rolling_forecast_arima(TFM.ClusterMeansDaytime, ClusterRuidoBajoDiurno,
+   train_obs=3500, lead=14);
 
-%rolling_forecast_arima(TFM.ClusterMeansDaytime, Cluster_1,
-   cluster_id=cluster_1, train_obs=3500, lead=14);
-
-%rolling_forecast_arima(TFM.ClusterMeansDaytime, Cluster_2,
-   cluster_id=cluster_2, train_obs=3500, lead=14);
-
-/* --- nighttime --- */
-%rolling_forecast_arima(TFM.ClusterMeansNighttime, Cluster_0,
-   cluster_id=cluster_0, time_period=nighttime, train_obs=3500, lead=14);
-
-%rolling_forecast_arima(TFM.ClusterMeansNighttime, Cluster_1,
-   cluster_id=cluster_1, time_period=nighttime, train_obs=3500, lead=14);
-
-%rolling_forecast_arima(TFM.ClusterMeansNighttime, Cluster_2,
-   cluster_id=cluster_2, time_period=nighttime, train_obs=3500, lead=14);
+%rolling_forecast_arima(TFM.ClusterMeansNight, ClusterRuidoAltoNocturno,
+   train_obs=3500, lead=14);
+%rolling_forecast_arima(TFM.ClusterMeansNight, ClusterRuidoMedioNocturno,
+   train_obs=3500, lead=14);
+%rolling_forecast_arima(TFM.ClusterMeansNight, ClusterRuidoBajoNocturno,
+   train_obs=3500, lead=14);
 
 /* ============================================================
 Display results (last cluster processed)
@@ -256,15 +263,246 @@ ACF/PACF identification and Residual Diagnostic plots
 ODS GRAPHICS ON / RESET WIDTH=768px HEIGHT=500px IMAGEFMT=PNG;
 
 /* Figure 1: ACF/PACF identification */
+
+/* Serie sin diferenciar */
 PROC ARIMA DATA=TFM.ClusterMeansDaytime(OBS=3500) PLOTS=ALL;
-   IDENTIFY VAR=Cluster_0(1,7) NLAG=30;
+   IDENTIFY VAR=ClusterRuidoAltoDiurno NLAG=30;
+QUIT;
+
+/* Figure 1: ACF/PACF identification */
+PROC ARIMA DATA=TFM.ClusterMeansDaytime(OBS=3500) PLOTS=ALL;
+   /* Serie diferenciada 1 vez */
+   IDENTIFY VAR=ClusterRuidoAltoDiurno(1) NLAG=30;
+QUIT;
+
+/* Figure 1: ACF/PACF identification */
+PROC ARIMA DATA=TFM.ClusterMeansDaytime(OBS=3500) PLOTS=ALL;
+   /* Serie diferenciada 1 vez y luego diferenciada estacionalmente */
+   IDENTIFY VAR=ClusterRuidoAltoDiurno(1,7) NLAG=30;
 QUIT;
 
 /* Figures 2 & 3: residual diagnostics + forecast fan */
 PROC ARIMA DATA=TFM.ClusterMeansDaytime(OBS=3500) PLOTS=ALL;
-   IDENTIFY VAR=Cluster_0(1,7) NLAG=30;
+   IDENTIFY VAR=ClusterRuidoAltoDiurno(1,7) NLAG=30;
    ESTIMATE P=(1) Q=(1 7 8) METHOD=CLS;
    FORECAST LEAD=14 INTERVAL=day BACK=60;
 QUIT;
 
+PROC ARIMA DATA=TFM.ClusterMeansDaytime(OBS=3500) PLOTS=ALL;
+   IDENTIFY VAR=ClusterRuidoAltoDiurno(1) NLAG=30;
+   ESTIMATE P=(1) Q=(7) METHOD=CLS; /* ARIMA (1,1,0) + MA(7) */
+   FORECAST LEAD=14 INTERVAL=day BACK=60;
+QUIT;
+
+PROC ARIMA DATA=TFM.ClusterMeansDaytime(OBS=3500) PLOTS=ALL;
+   IDENTIFY VAR=ClusterRuidoAltoDiurno(1,7) NLAG=30;
+   ESTIMATE P=(1) Q=(0) (7) METHOD=CLS; /* SARIMA (1,1,0)(1,1,1) 7 */
+   FORECAST LEAD=14 INTERVAL=day BACK=60;
+QUIT;
+
+PROC ARIMA DATA=TFM.ClusterMeansDaytime(OBS=3500) PLOTS=ALL;
+   IDENTIFY VAR=ClusterRuidoAltoDiurno(1,7) NLAG=30;
+   ESTIMATE P=(1) Q=(1) (7) METHOD=CLS; /* SARIMA (1,1,1)(1,1,1) 7 */
+   FORECAST LEAD=14 INTERVAL=day BACK=60;
+QUIT;
+
+/* 1. Point SAS to your specific folder */
+ODS LISTING GPATH="/home/u64274668/TFM/Images";
+
+/* 2. Set the image name prefix and format (PNG or PDF) */
+ODS GRAPHICS ON / IMAGENAME="PrediccionesSarima_ACF" IMAGEFMT=PNG;
+
+/* 3. Your original code */
+PROC ARIMA DATA=TFM.ClusterMeansDaytime(OBS=3500) PLOTS=ALL;
+   IDENTIFY VAR=ClusterRuidoAltoDiurno(1,7) NLAG=30;
+   ESTIMATE P=(1) Q=(1) (7) METHOD=CLS; /* SARIMA (1,1,1)(1,1,1) 7 */
+   FORECAST LEAD=14 INTERVAL=day BACK=60;
+QUIT;
+
+ODS LISTING CLOSE;
+
 ODS GRAPHICS OFF;
+
+/*** Diurno ***/
+/* 1. Point SAS to your specific folder */
+ODS LISTING GPATH="/home/u64274668/TFM/Images";
+
+/* 2. Set the image name prefix and format (PNG or PDF) */
+ODS GRAPHICS ON / IMAGENAME="RuidoAltoDiurnoOriginal_ACF" IMAGEFMT=PNG;
+
+/* 3. Your original code */
+PROC ARIMA DATA=TFM.ClusterMeansDaytime(OBS=3500) PLOTS=ALL;
+   /* Serie diferenciada 1 vez */
+   IDENTIFY VAR=ClusterRuidoAltoDiurno NLAG=30;
+QUIT;
+
+/* 2. Set the image name prefix and format (PNG or PDF) */
+ODS GRAPHICS ON / IMAGENAME="RuidoAltoDiurnoDiferenciado_ACF" IMAGEFMT=PNG;
+
+/* 3. Your original code */
+PROC ARIMA DATA=TFM.ClusterMeansDaytime(OBS=3500) PLOTS=ALL;
+   /* Serie diferenciada 1 vez */
+   IDENTIFY VAR=ClusterRuidoAltoDiurno(1) NLAG=30;
+QUIT;
+
+/* 2. Set the image name prefix and format (PNG or PDF) */
+ODS GRAPHICS ON / IMAGENAME="RuidoAltoDiurnoDiferenciadoDoble_ACF" IMAGEFMT=PNG;
+
+/* 3. Your original code */
+PROC ARIMA DATA=TFM.ClusterMeansDaytime(OBS=3500) PLOTS=ALL;
+   /* Serie diferenciada 1 vez */
+   IDENTIFY VAR=ClusterRuidoAltoDiurno(1, 7) NLAG=30;
+QUIT;
+
+/* *************** Diurno Medio ************ */
+/* 2. Set the image name prefix and format (PNG or PDF) */
+ODS GRAPHICS ON / IMAGENAME="RuidoMedioDiurnoOriginal_ACF" IMAGEFMT=PNG;
+
+/* 3. Your original code */
+PROC ARIMA DATA=TFM.ClusterMeansDaytime(OBS=3500) PLOTS=ALL;
+   /* Serie diferenciada 1 vez */
+   IDENTIFY VAR=ClusterRuidoMedioDiurno NLAG=30;
+QUIT;
+
+/* 2. Set the image name prefix and format (PNG or PDF) */
+ODS GRAPHICS ON / IMAGENAME="RuidoMedioDiurnoDiferenciado_ACF" IMAGEFMT=PNG;
+
+/* 3. Your original code */
+PROC ARIMA DATA=TFM.ClusterMeansDaytime(OBS=3500) PLOTS=ALL;
+   /* Serie diferenciada 1 vez */
+   IDENTIFY VAR=ClusterRuidoMedioDiurno(1) NLAG=30;
+QUIT;
+
+/* 2. Set the image name prefix and format (PNG or PDF) */
+ODS GRAPHICS ON / IMAGENAME="RuidoMedioDiurnoDiferenciadoDoble_ACF"
+   IMAGEFMT=PNG;
+
+/* 3. Your original code */
+PROC ARIMA DATA=TFM.ClusterMeansDaytime(OBS=3500) PLOTS=ALL;
+   /* Serie diferenciada 1 vez */
+   IDENTIFY VAR=ClusterRuidoMedioDiurno(1, 7) NLAG=30;
+QUIT;
+
+/* ************ Diurno Bajo ********* */
+/* 2. Set the image name prefix and format (PNG or PDF) */
+ODS GRAPHICS ON / IMAGENAME="RuidoBajoDiurnoOriginal_ACF" IMAGEFMT=PNG;
+
+/* 3. Your original code */
+PROC ARIMA DATA=TFM.ClusterMeansDaytime(OBS=3500) PLOTS=ALL;
+   /* Serie diferenciada 1 vez */
+   IDENTIFY VAR=ClusterRuidoBajoDiurno NLAG=30;
+QUIT;
+
+/* 2. Set the image name prefix and format (PNG or PDF) */
+ODS GRAPHICS ON / IMAGENAME="RuidoBajoDiurnoDiferenciado_ACF" IMAGEFMT=PNG;
+
+/* 3. Your original code */
+PROC ARIMA DATA=TFM.ClusterMeansDaytime(OBS=3500) PLOTS=ALL;
+   /* Serie diferenciada 1 vez */
+   IDENTIFY VAR=ClusterRuidoBajoDiurno(1) NLAG=30;
+QUIT;
+
+/* 2. Set the image name prefix and format (PNG or PDF) */
+ODS GRAPHICS ON / IMAGENAME="RuidoBajoDiurnoDiferenciadoDoble_ACF" IMAGEFMT=PNG;
+
+/* 3. Your original code */
+PROC ARIMA DATA=TFM.ClusterMeansDaytime(OBS=3500) PLOTS=ALL;
+   /* Serie diferenciada 1 vez */
+   IDENTIFY VAR=ClusterRuidoBajoDiurno(1, 7) NLAG=30;
+QUIT;
+
+/* 4. Close the destination so the files finish saving */
+ODS LISTING CLOSE;
+
+/* **** Nocturno *** */
+/* 1. Point SAS to your specific folder */
+ODS LISTING GPATH="/home/u64274668/TFM/Images";
+
+/* 2. Set the image name prefix and format (PNG or PDF) */
+ODS GRAPHICS ON / IMAGENAME="RuidoAltoNocturnoOriginal_ACF" IMAGEFMT=PNG;
+
+/* 3. Your original code */
+PROC ARIMA DATA=TFM.ClusterMeansNight(OBS=3500) PLOTS=ALL;
+   /* Serie diferenciada 1 vez */
+   IDENTIFY VAR=ClusterRuidoAltoNocturno NLAG=30;
+QUIT;
+
+/* 2. Set the image name prefix and format (PNG or PDF) */
+ODS GRAPHICS ON / IMAGENAME="RuidoAltoNocturnoDiferenciado_ACF" IMAGEFMT=PNG;
+
+/* 3. Your original code */
+PROC ARIMA DATA=TFM.ClusterMeansNight(OBS=3500) PLOTS=ALL;
+   /* Serie diferenciada 1 vez */
+   IDENTIFY VAR=ClusterRuidoAltoNocturno(1) NLAG=30;
+QUIT;
+
+/* 2. Set the image name prefix and format (PNG or PDF) */
+ODS GRAPHICS ON / IMAGENAME="RuidoAltoNocturnoDiferenciadoDoble_ACF"
+   IMAGEFMT=PNG;
+
+/* 3. Your original code */
+PROC ARIMA DATA=TFM.ClusterMeansNight(OBS=3500) PLOTS=ALL;
+   /* Serie diferenciada 1 vez */
+   IDENTIFY VAR=ClusterRuidoAltoNocturno(1, 7) NLAG=30;
+QUIT;
+
+/* *************** Nocturno Medio ************ */
+/* 2. Set the image name prefix and format (PNG or PDF) */
+ODS GRAPHICS ON / IMAGENAME="RuidoMedioNocturnoOriginal_ACF" IMAGEFMT=PNG;
+
+/* 3. Your original code */
+PROC ARIMA DATA=TFM.ClusterMeansNight(OBS=3500) PLOTS=ALL;
+   /* Serie diferenciada 1 vez */
+   IDENTIFY VAR=ClusterRuidoMedioNocturno NLAG=30;
+QUIT;
+
+/* 2. Set the image name prefix and format (PNG or PDF) */
+ODS GRAPHICS ON / IMAGENAME="RuidoMedioNocturnoDiferenciado_ACF" IMAGEFMT=PNG;
+
+/* 3. Your original code */
+PROC ARIMA DATA=TFM.ClusterMeansNight(OBS=3500) PLOTS=ALL;
+   /* Serie diferenciada 1 vez */
+   IDENTIFY VAR=ClusterRuidoMedioNocturno(1) NLAG=30;
+QUIT;
+
+/* 2. Set the image name prefix and format (PNG or PDF) */
+ODS GRAPHICS ON / IMAGENAME="RuidoMedioNocturnoDiferenciadoDoble_ACF"
+   IMAGEFMT=PNG;
+
+/* 3. Your original code */
+PROC ARIMA DATA=TFM.ClusterMeansNight(OBS=3500) PLOTS=ALL;
+   /* Serie diferenciada 1 vez */
+   IDENTIFY VAR=ClusterRuidoMedioNocturno(1, 7) NLAG=30;
+QUIT;
+
+/* ************ Nocturno Bajo ********* */
+/* 2. Set the image name prefix and format (PNG or PDF) */
+ODS GRAPHICS ON / IMAGENAME="RuidoBajoNocturnoOriginal_ACF" IMAGEFMT=PNG;
+
+/* 3. Your original code */
+PROC ARIMA DATA=TFM.ClusterMeansNight(OBS=3500) PLOTS=ALL;
+   /* Serie diferenciada 1 vez */
+   IDENTIFY VAR=ClusterRuidoBajoNocturno NLAG=30;
+QUIT;
+
+/* 2. Set the image name prefix and format (PNG or PDF) */
+ODS GRAPHICS ON / IMAGENAME="RuidoBajoNocturnoDiferenciado_ACF" IMAGEFMT=PNG;
+
+/* 3. Your original code */
+PROC ARIMA DATA=TFM.ClusterMeansNight(OBS=3500) PLOTS=ALL;
+   /* Serie diferenciada 1 vez */
+   IDENTIFY VAR=ClusterRuidoBajoNocturno(1) NLAG=30;
+QUIT;
+
+/* 2. Set the image name prefix and format (PNG or PDF) */
+ODS GRAPHICS ON / IMAGENAME="RuidoBajoNocturnoDiferenciadoDoble_ACF"
+   IMAGEFMT=PNG;
+
+/* 3. Your original code */
+PROC ARIMA DATA=TFM.ClusterMeansNight(OBS=3500) PLOTS=ALL;
+   /* Serie diferenciada 1 vez */
+   IDENTIFY VAR=ClusterRuidoBajoNocturno(1, 7) NLAG=30;
+QUIT;
+
+/* 4. Close the destination so the files finish saving */
+ODS LISTING CLOSE;
