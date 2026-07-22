@@ -45,8 +45,8 @@ def create_date_column(df):
     df["FECHA"] = pd.to_datetime(
         {
             "year": df["Año"],
-            "month": df["mes"],
-            "day": df["dia"]
+            "month": df["Mes"],
+            "day": df["Día"]
         },
         errors="coerce"
     )
@@ -54,19 +54,19 @@ def create_date_column(df):
     cols = ['FECHA'] + [col for col in df.columns if col != 'FECHA']
     df = df.reindex(columns=cols)
     # Drop original date components
-    df.drop(columns=['Año', 'mes', 'dia'], inplace=True)
+    df.drop(columns=['Año', 'Mes', 'Día'], inplace=True)
     return df
 
 def pivot_and_rename_types(df):
-    """Pivots the 'tipo' column and renames the resulting time periods."""
+    """Pivots the 'Periodo' column and renames the resulting time periods."""
     df = (
         df
-        .pivot(index=["FECHA", "Estación"], columns="tipo", 
+        .pivot(index=["FECHA", "Estación"], columns="Periodo", 
                values=["LAeq", "L1", "L10", "L50", "L90", "L99"])
         .reset_index()
     )
     
-    # Rename the sub-columns from the 'tipo' pivot
+    # Rename the sub-columns from the 'Periodo' pivot
     df = df.rename(columns={
         "D": "Diurno",
         "E": "Vespertino",

@@ -10,15 +10,15 @@ API reference:
   resource_id: 215885-0-contaminacion-ruido
 
 Raw API record example:
-  {"Estación": "3", "Año": "2025", "mes": "4", "dia": "11",
-   "tipo": "D", "LAeq": "57,4", "L1": "66,6", ...}
+  {"Estación": "3", "Año": "2025", "Mes": "4", "Día": "11",
+   "Periodo": "D", "LAeq": "57,4", "L1": "66,6", ...}
 
 Data format differences vs data/final/:
-  - Separate Año/mes/dia columns  → merged to FECHA (ISO date)
+  - Separate Año/Mes/Día columns  → merged to FECHA (ISO date)
   - Comma decimal separator       → dot decimal
   - Long format (one row per station-period) → wide (stations as columns)
-  - LAeqDiurno = tipo D Laeq directly
-  - LAeqNocturno = tipo N Laeq directly
+  - LAeqDiurno = Periodo D Laeq directly
+  - LAeqNocturno = Periodo N Laeq directly
   - Missing stations → seasonal imputation (same logic as 03_handle_missing.py)
 """
 
@@ -111,8 +111,8 @@ def fetch_last_day(target_date: date | None = None) -> tuple[pd.DataFrame, date]
 
     df["_date"] = pd.to_datetime({
         "year":  df[year_col].str.strip(),
-        "month": df["mes"].str.strip(),
-        "day":   df["dia"].str.strip(),
+        "month": df["Mes"].str.strip(),
+        "day":   df["Día"].str.strip(),
     }, errors="coerce")
 
     if target_date is None:
@@ -150,8 +150,8 @@ def clean_raw(raw: pd.DataFrame, target_date: date) -> dict[str, pd.Series]:
     df = df[df["Estación"].isin(VALID_STATIONS) & ~df["Estación"].isin(EXCLUDED_STATIONS)].copy()
 
     # Period type — only D (daytime) and N (nighttime); E is not used
-    df["tipo"] = df["tipo"].str.strip().str.upper()
-    df = df[df["tipo"].isin({"D", "N"})].copy()
+    df["Periodo"] = df["Periodo"].str.strip().str.upper()
+    df = df[df["Periodo"].isin({"D", "N"})].copy()
 
     # LAeq: comma decimal → float
     df["LAeq"] = (
@@ -163,16 +163,15 @@ def clean_raw(raw: pd.DataFrame, target_date: date) -> dict[str, pd.Series]:
     df["LAeq"] = pd.to_numeric(df["LAeq"], errors="coerce")
     df = df.dropna(subset=["Estación", "LAeq"])
 
-    # --- Daytime: tipo D, Laeq directly -------------------------------------
+    # --- Daytime: Periodo D, Laeq directly -------------------------------------
     day_vals: dict[int, float] = {}
-    for Estación, grp in df[df["tipo"] == "D"].groupby("Estación"):
+    for Estación, grp in df[df["Periodo"] == "D"].groupby("Estación"):
         day_vals[int(Estación)] = float(grp["LAeq"].mean())
 
-    # --- Nighttime: tipo N, Laeq directly -----------------------------------
+    # --- Nighttime: Periodo N, Laeq directly -----------------------------------
     night_vals: dict[int, float] = {}
-    for Estación, grp in df[df["tipo"] == "N"].groupby("Estación"):
+    for Estación, grp in df[df["Periodo"] == "N"].groupby("Estación"):
         night_vals[int(Estación)] = float(grp["LAeq"].mean())
-
     return {
         "daytime":   pd.Series(day_vals,   name=str(target_date)),
         "nighttime": pd.Series(night_vals, name=str(target_date)),

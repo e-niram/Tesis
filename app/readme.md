@@ -7,8 +7,9 @@ Run once (then monthly) to train a Random Forest per cluster per period (6 model
 
 **[src/pipeline/04_fetch_api.py](../src/pipeline/04_fetch_api.py)**
 Daily fetch from the CKAN API. Handles all format differences vs. `data/final/`:
-- Merges `Año/mes/dia` → `FECHA`; converts comma decimals
-- Computes `LAeqDiurno` = energy-mean of tipos D+E; `LAeqNocturno` = tipo N
+
+- Merges `Año/Mes/Día` → `FECHA`; converts comma decimals
+- Computes `LAeqDiurno` = energy-mean of tipos D+E; `LAeqNocturno` = Periodo N
 - Imputes missing stations using seasonal neighbors (reuses `03_handle_missing.py` logic in pressure domain)
 - Appends to `data/final/daytime_final.csv` and `nighttime_final.csv`
 
@@ -17,13 +18,13 @@ Loads the saved `.pkl` models, updates cluster means with the new day, runs infe
 
 ## Frontend (5 files)
 
-| File | Purpose |
-|------|---------|
-| [app/index.html](index.html) | Semantic HTML, WCAG 2.1 AA (skip links, ARIA labels, keyboard nav) |
+| File                               | Purpose                                                               |
+| ---------------------------------- | --------------------------------------------------------------------- |
+| [app/index.html](index.html)       | Semantic HTML, WCAG 2.1 AA (skip links, ARIA labels, keyboard nav)    |
 | [app/css/style.css](css/style.css) | Madrid brand (`#003082` blue, Source Sans Pro), WHO colour thresholds |
-| [app/js/map.js](js/map.js) | Leaflet.js with coloured circle markers, popup details |
-| [app/js/charts.js](js/charts.js) | Chart.js 14-day forecast line chart with WHO reference lines |
-| [app/js/app.js](js/app.js) | Controller — loads JSON, wires period/day controls, ranking table |
+| [app/js/map.js](js/map.js)         | Leaflet.js with coloured circle markers, popup details                |
+| [app/js/charts.js](js/charts.js)   | Chart.js 14-day forecast line chart with WHO reference lines          |
+| [app/js/app.js](js/app.js)         | Controller — loads JSON, wires period/day controls, ranking table     |
 
 ## Automation
 
