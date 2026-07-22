@@ -10,7 +10,7 @@ API reference:
   resource_id: 215885-0-contaminacion-ruido
 
 Raw API record example:
-  {"NMT": "3", "Año": "2025", "mes": "4", "dia": "11",
+  {"Estación": "3", "Año": "2025", "mes": "4", "dia": "11",
    "tipo": "D", "LAeq": "57,4", "L1": "66,6", ...}
 
 Data format differences vs data/final/:
@@ -146,8 +146,8 @@ def clean_raw(raw: pd.DataFrame, target_date: date) -> dict[str, pd.Series]:
     df.columns = [c.strip() for c in df.columns]
 
     # Station ID — keep only known valid stations, drop explicit exclusions
-    df["NMT"] = pd.to_numeric(df["NMT"], errors="coerce").astype("Int64")
-    df = df[df["NMT"].isin(VALID_STATIONS) & ~df["NMT"].isin(EXCLUDED_STATIONS)].copy()
+    df["Estación"] = pd.to_numeric(df["Estación"], errors="coerce").astype("Int64")
+    df = df[df["Estación"].isin(VALID_STATIONS) & ~df["Estación"].isin(EXCLUDED_STATIONS)].copy()
 
     # Period type — only D (daytime) and N (nighttime); E is not used
     df["tipo"] = df["tipo"].str.strip().str.upper()
@@ -161,17 +161,17 @@ def clean_raw(raw: pd.DataFrame, target_date: date) -> dict[str, pd.Series]:
         .str.strip()
     )
     df["LAeq"] = pd.to_numeric(df["LAeq"], errors="coerce")
-    df = df.dropna(subset=["NMT", "LAeq"])
+    df = df.dropna(subset=["Estación", "LAeq"])
 
     # --- Daytime: tipo D, Laeq directly -------------------------------------
     day_vals: dict[int, float] = {}
-    for nmt, grp in df[df["tipo"] == "D"].groupby("NMT"):
-        day_vals[int(nmt)] = float(grp["LAeq"].mean())
+    for Estación, grp in df[df["tipo"] == "D"].groupby("Estación"):
+        day_vals[int(Estación)] = float(grp["LAeq"].mean())
 
     # --- Nighttime: tipo N, Laeq directly -----------------------------------
     night_vals: dict[int, float] = {}
-    for nmt, grp in df[df["tipo"] == "N"].groupby("NMT"):
-        night_vals[int(nmt)] = float(grp["LAeq"].mean())
+    for Estación, grp in df[df["tipo"] == "N"].groupby("Estación"):
+        night_vals[int(Estación)] = float(grp["LAeq"].mean())
 
     return {
         "daytime":   pd.Series(day_vals,   name=str(target_date)),

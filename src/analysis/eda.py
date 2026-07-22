@@ -18,7 +18,7 @@ def plot_processed_data():
         print(f"Processing Station: {station_id} - {name}")
         
         # Filter data for this specific station
-        df_station = df_full[df_full['NMT'] == station_id]
+        df_station = df_full[df_full['Estación'] == station_id]
         
         if not df_station.empty:
             # 1. Plot full historical data

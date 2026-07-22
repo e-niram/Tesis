@@ -5,18 +5,18 @@ def load_processed_data(file_path):
     """Carga el archivo procesado asegurando los tipos de datos correctos."""
     df = pd.read_csv(file_path, sep=';')
 
-    df['NMT'] = df['NMT'].astype(int)
+    df['Estación'] = df['Estación'].astype(int)
     return df
 
 def pivot_noise_metric(df, metric_column):
     """
     Transforma el dataframe: 
     - Filas: FECHA
-    - Columnas: NMT (Estaciones)
+    - Columnas: Estación (Estaciones)
     - Valores: La métrica seleccionada (Diurno o Nocturno)
     """
     # Pivotamos los datos
-    pivoted_df = df.pivot(index='FECHA', columns='NMT', values=metric_column)
+    pivoted_df = df.pivot(index='FECHA', columns='Estación', values=metric_column)
     
     # Opcional: Ordenar por fecha para asegurar cronología
     pivoted_df.index = pd.to_datetime(pivoted_df.index)

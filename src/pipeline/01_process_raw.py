@@ -15,7 +15,7 @@ def save_to_csv(df, filename="processed_data.csv"):
 
 def select_final_columns(df):
     """Keeps only the specific columns requested."""
-    target_cols = ['FECHA', 'NMT', 'LAeqDiurno', 'LAeqNocturno']
+    target_cols = ['FECHA', 'Estación', 'LAeqDiurno', 'LAeqNocturno']
     return df[target_cols]
 
 def clean_data(df):
@@ -38,7 +38,7 @@ def clean_data(df):
 
 def filter_by_station(df, station_code):
     """Filters the dataframe by a specific station code."""
-    return df[df['NMT'].isin([station_code])]
+    return df[df['Estación'].isin([station_code])]
 
 def create_date_column(df):
     """Combines Year, Month, and Day columns into a single datetime column."""
@@ -61,7 +61,7 @@ def pivot_and_rename_types(df):
     """Pivots the 'tipo' column and renames the resulting time periods."""
     df = (
         df
-        .pivot(index=["FECHA", "NMT"], columns="tipo", 
+        .pivot(index=["FECHA", "Estación"], columns="tipo", 
                values=["LAeq", "L1", "L10", "L50", "L90", "L99"])
         .reset_index()
     )
@@ -89,9 +89,9 @@ def flatten_columns(df):
 
 def convert_numeric_values(df):
     """Replaces commas with dots and converts object columns to floats."""
-    # We skip 'FECHA' and 'NMT' to avoid errors during conversion
+    # We skip 'FECHA' and 'Estación' to avoid errors during conversion
     for col in df.columns:
-        if df[col].dtype == object and col not in ["FECHA", "NMT"]:
+        if df[col].dtype == object and col not in ["FECHA", "Estación"]:
             df[col] = df[col].str.replace(",", ".").astype(float)
     return df
 
