@@ -74,9 +74,12 @@ function initMap(onStationClick) {
     attributionControl: true,
   });
 
-  // Carto Positron tile layer — clean, light, free
+  // Carto Positron tile layer — clean, light.
+  // CARTO Basemaps API key (issued to UCM). It is a public, client-side key:
+  // it ships to every browser that loads the page.
+  const CARTO_API_KEY = 'cb1_3vbk_1_4579e38e2cf94d15c51f812d';
   L.tileLayer(
-    'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+    `https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key=${CARTO_API_KEY}`,
     {
       attribution:
         '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> &copy; ' +
